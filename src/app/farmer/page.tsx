@@ -2,14 +2,20 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { supabase, type Listing } from '@/lib/supabase'
+import {
+  Sprout, Tractor, Camera, MapPin, Plus, Pencil, Trash2,
+  Phone, Package, ArrowRight, X, Check, LogOut, RefreshCw,
+} from 'lucide-react'
+import { supabase, type Listing, type Order, type OrderStatus } from '@/lib/supabase'
 import { useLanguage, LanguageSelector } from '@/lib/LanguageContext'
+import { MarketInsights } from '@/components/MarketInsights'
 
 type FarmerProfile = { name: string; phone: string }
 
 export default function FarmerPage() {
   const { t } = useLanguage()
   const [profile, setProfile] = useState<FarmerProfile | null>(null)
+  const [showSignIn, setShowSignIn] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -22,6 +28,7 @@ export default function FarmerPage() {
     const p = { name, phone }
     localStorage.setItem('farmeasy_farmer', JSON.stringify(p))
     setProfile(p)
+    setShowSignIn(false)
   }
 
   const handleSignOut = () => {
@@ -34,9 +41,11 @@ export default function FarmerPage() {
   return (
     <div className="min-h-screen bg-green-50">
       <header className="bg-white shadow-sm">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="w-full px-6 lg:px-10 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <span className="text-2xl">🌾</span>
+            <div className="w-9 h-9 rounded-lg bg-green-600 flex items-center justify-center">
+              <Sprout className="w-5 h-5 text-white" />
+            </div>
             <span className="text-xl font-bold text-green-800">{t('appName')}</span>
           </Link>
           <div className="flex items-center gap-4">
@@ -49,8 +58,9 @@ export default function FarmerPage() {
             {profile && (
               <button
                 onClick={handleSignOut}
-                className="text-sm text-red-600 hover:underline"
+                className="text-sm text-red-600 hover:underline inline-flex items-center gap-1"
               >
+                <LogOut className="w-4 h-4" />
                 {t('signOut')}
               </button>
             )}
@@ -58,11 +68,55 @@ export default function FarmerPage() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
-        {!profile ? (
-          <SignInForm onSignIn={handleSignIn} />
-        ) : (
+      <main className="max-w-[1400px] mx-auto px-6 py-8">
+        {profile ? (
           <Dashboard profile={profile} />
+        ) : (
+          <>
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-green-900">{t('marketInsights')}</h1>
+              <p className="text-gray-600 mt-1">{t('insightsSubtitle')}</p>
+            </div>
+
+            <div className="bg-linear-to-r from-green-600 to-green-700 text-white rounded-2xl shadow-lg p-6 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Tractor className="w-10 h-10 shrink-0" />
+                <div>
+                  <div className="text-xl font-bold">{t('welcomeFarmer')}</div>
+                  <p className="text-green-50 text-sm mt-1">{t('signInPrompt')}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowSignIn(true)}
+                className="bg-white text-green-700 hover:bg-green-50 font-semibold px-6 py-3 rounded-lg shadow whitespace-nowrap inline-flex items-center gap-2"
+              >
+                <span>{t('signInToSell')}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            <MarketInsights />
+
+            {showSignIn && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-bold text-green-900">{t('welcomeFarmer')}</h2>
+                      <button
+                        onClick={() => setShowSignIn(false)}
+                        className="text-gray-400 hover:text-gray-600"
+                        aria-label="Close"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                    <SignInForm onSignIn={handleSignIn} />
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>
@@ -80,9 +134,8 @@ function SignInForm({ onSignIn }: { onSignIn: (name: string, phone: string) => v
   }
 
   return (
-    <div className="max-w-md mx-auto bg-white rounded-2xl shadow-md p-8 mt-8">
-      <h2 className="text-2xl font-bold text-green-900 mb-2">{t('welcomeFarmer')}</h2>
-      <p className="text-gray-600 mb-6">{t('signInPrompt')}</p>
+    <div>
+      <p className="text-gray-600 mb-4">{t('signInPrompt')}</p>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">{t('yourName')}</label>
@@ -118,6 +171,81 @@ function SignInForm({ onSignIn }: { onSignIn: (name: string, phone: string) => v
 }
 
 function Dashboard({ profile }: { profile: FarmerProfile }) {
+  const { t } = useLanguage()
+  const [tab, setTab] = useState<'listings' | 'orders' | 'insights'>('listings')
+  const [pendingCount, setPendingCount] = useState(0)
+
+  useEffect(() => {
+    const loadPendingCount = async () => {
+      const { count } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('farmer_phone', profile.phone)
+        .eq('status', 'pending')
+      setPendingCount(count ?? 0)
+    }
+    loadPendingCount()
+  }, [profile.phone, tab])
+
+  return (
+    <div>
+      <div className="flex gap-2 mb-6 border-b border-gray-200 flex-wrap">
+        <TabButton active={tab === 'listings'} onClick={() => setTab('listings')} label={t('myListingsTab')} />
+        <TabButton
+          active={tab === 'orders'}
+          onClick={() => setTab('orders')}
+          label={t('orders')}
+          badge={pendingCount > 0 ? pendingCount : undefined}
+        />
+        <TabButton active={tab === 'insights'} onClick={() => setTab('insights')} label={t('tabInsights')} />
+      </div>
+
+      {tab === 'listings' && <ListingsView profile={profile} />}
+      {tab === 'orders' && <OrdersView profile={profile} />}
+      {tab === 'insights' && (
+        <div>
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-green-900">{t('marketInsights')}</h1>
+            <p className="text-gray-600 mt-1">{t('insightsSubtitle')}</p>
+          </div>
+          <MarketInsights />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TabButton({
+  active,
+  onClick,
+  label,
+  badge,
+}: {
+  active: boolean
+  onClick: () => void
+  label: string
+  badge?: number
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`relative px-4 py-2.5 font-medium transition-colors ${
+        active
+          ? 'text-green-800 border-b-2 border-green-600'
+          : 'text-gray-600 hover:text-green-700'
+      }`}
+    >
+      {label}
+      {badge !== undefined && (
+        <span className="ml-2 inline-flex items-center justify-center min-w-[20px] px-1.5 py-0.5 text-xs font-semibold bg-red-500 text-white rounded-full">
+          {badge}
+        </span>
+      )}
+    </button>
+  )
+}
+
+function ListingsView({ profile }: { profile: FarmerProfile }) {
   const { t } = useLanguage()
   const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
@@ -158,9 +286,10 @@ function Dashboard({ profile }: { profile: FarmerProfile }) {
         </div>
         <button
           onClick={() => { setEditing(null); setShowForm(true) }}
-          className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg shadow transition-colors"
+          className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg shadow transition-colors inline-flex items-center gap-2"
         >
-          {t('addProduce')}
+          <Plus className="w-5 h-5" />
+          <span>{t('addProduce').replace('+ ', '')}</span>
         </button>
       </div>
 
@@ -177,11 +306,11 @@ function Dashboard({ profile }: { profile: FarmerProfile }) {
         <p className="text-gray-500">{t('loading')}</p>
       ) : listings.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
-          <div className="text-5xl mb-4">🌱</div>
+          <Sprout className="w-16 h-16 text-green-300 mx-auto mb-4" />
           <p className="text-gray-600 mb-4">{t('noListingsYet')}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {listings.map((l) => (
             <div key={l.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
               {l.image_url && (
@@ -190,7 +319,10 @@ function Dashboard({ profile }: { profile: FarmerProfile }) {
               )}
               <div className="p-4">
                 <h3 className="font-semibold text-lg text-green-900">{l.produce_name}</h3>
-                <p className="text-sm text-gray-600 mt-1">📍 {l.location}</p>
+                <p className="text-sm text-gray-600 mt-1 inline-flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>{l.location}</span>
+                </p>
                 <div className="mt-3 flex items-center justify-between">
                   <div>
                     <div className="text-2xl font-bold text-green-700">₹{l.price_per_kg}<span className="text-sm font-normal text-gray-500">/kg</span></div>
@@ -200,15 +332,17 @@ function Dashboard({ profile }: { profile: FarmerProfile }) {
                 <div className="mt-4 flex gap-2">
                   <button
                     onClick={() => { setEditing(l); setShowForm(true) }}
-                    className="flex-1 text-sm bg-gray-100 hover:bg-gray-200 py-2 rounded-lg font-medium"
+                    className="flex-1 text-sm bg-gray-100 hover:bg-gray-200 py-2 rounded-lg font-medium inline-flex items-center justify-center gap-1"
                   >
-                    {t('edit')}
+                    <Pencil className="w-3.5 h-3.5" />
+                    <span>{t('edit')}</span>
                   </button>
                   <button
                     onClick={() => handleDelete(l.id)}
-                    className="flex-1 text-sm bg-red-50 hover:bg-red-100 text-red-700 py-2 rounded-lg font-medium"
+                    className="flex-1 text-sm bg-red-50 hover:bg-red-100 text-red-700 py-2 rounded-lg font-medium inline-flex items-center justify-center gap-1"
                   >
-                    {t('delete')}
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{t('delete')}</span>
                   </button>
                 </div>
               </div>
@@ -216,6 +350,159 @@ function Dashboard({ profile }: { profile: FarmerProfile }) {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function OrdersView({ profile }: { profile: FarmerProfile }) {
+  const { t } = useLanguage()
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchOrders = async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('farmer_phone', profile.phone)
+      .order('created_at', { ascending: false })
+    if (error) console.error(error)
+    setOrders(data ?? [])
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchOrders()
+  }, [profile.phone])
+
+  const updateStatus = async (id: number, newStatus: OrderStatus, confirmKey: 'confirmMarkCompleted' | 'confirmCancelOrder') => {
+    if (!confirm(t(confirmKey))) return
+    const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', id)
+    if (error) return alert(error.message)
+    fetchOrders()
+  }
+
+  const groupedPending = orders.filter((o) => o.status === 'pending')
+  const groupedCompleted = orders.filter((o) => o.status === 'completed')
+  const groupedCancelled = orders.filter((o) => o.status === 'cancelled')
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-green-900">{t('orders')}</h1>
+      </div>
+
+      {loading ? (
+        <p className="text-gray-500">{t('loading')}</p>
+      ) : orders.length === 0 ? (
+        <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
+          <Package className="w-16 h-16 text-green-300 mx-auto mb-4" />
+          <p className="text-gray-600">{t('noOrdersYet')}</p>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {groupedPending.length > 0 && (
+            <OrderGroup
+              title={t('pendingOrders')}
+              orders={groupedPending}
+              onMarkCompleted={(id) => updateStatus(id, 'completed', 'confirmMarkCompleted')}
+              onCancel={(id) => updateStatus(id, 'cancelled', 'confirmCancelOrder')}
+            />
+          )}
+          {groupedCompleted.length > 0 && (
+            <OrderGroup title={t('completedOrders')} orders={groupedCompleted} />
+          )}
+          {groupedCancelled.length > 0 && (
+            <OrderGroup title={t('cancelledOrders')} orders={groupedCancelled} />
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function OrderGroup({
+  title,
+  orders,
+  onMarkCompleted,
+  onCancel,
+}: {
+  title: string
+  orders: Order[]
+  onMarkCompleted?: (id: number) => void
+  onCancel?: (id: number) => void
+}) {
+  const { t } = useLanguage()
+  return (
+    <div>
+      <h2 className="text-lg font-bold text-green-900 mb-3">{title} ({orders.length})</h2>
+      <div className="space-y-3">
+        {orders.map((o) => {
+          const total = o.quantity_kg * o.price_per_kg
+          const statusColor =
+            o.status === 'pending'
+              ? 'bg-yellow-100 text-yellow-800'
+              : o.status === 'completed'
+              ? 'bg-green-100 text-green-800'
+              : 'bg-gray-100 text-gray-600'
+          const statusLabel =
+            o.status === 'pending'
+              ? t('orderStatusPending')
+              : o.status === 'completed'
+              ? t('orderStatusCompleted')
+              : t('orderStatusCancelled')
+
+          return (
+            <div key={o.id} className="bg-white rounded-xl shadow-sm p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex-1 min-w-[200px]">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold text-green-900">{o.produce_name}</h3>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusColor}`}>
+                      {statusLabel}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-700 mt-1">
+                    {o.quantity_kg} kg × ₹{o.price_per_kg}/kg =
+                    <span className="font-bold text-green-700"> ₹{total.toFixed(2)}</span>
+                  </p>
+                  <p className="text-sm text-gray-600 mt-2">
+                    <span className="font-medium">{t('buyer')}:</span> {o.buyer_name}
+                    {' · '}
+                    <a href={`tel:${o.buyer_phone}`} className="text-green-700 hover:underline inline-flex items-center gap-1">
+                      <Phone className="w-3 h-3" /> {o.buyer_phone}
+                    </a>
+                  </p>
+                  {o.note && (
+                    <p className="text-sm text-gray-600 mt-1 italic">&ldquo;{o.note}&rdquo;</p>
+                  )}
+                  <p className="text-xs text-gray-400 mt-2">
+                    {new Date(o.created_at).toLocaleString()}
+                  </p>
+                </div>
+                {onMarkCompleted && onCancel && (
+                  <div className="flex gap-2 shrink-0">
+                    <button
+                      onClick={() => onMarkCompleted(o.id)}
+                      className="text-sm bg-green-600 hover:bg-green-700 text-white font-medium px-3 py-2 rounded-lg inline-flex items-center gap-1"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span>{t('markCompleted')}</span>
+                    </button>
+                    <button
+                      onClick={() => onCancel(o.id)}
+                      className="text-sm bg-red-50 hover:bg-red-100 text-red-700 font-medium px-3 py-2 rounded-lg inline-flex items-center gap-1"
+                    >
+                      <X className="w-4 h-4" />
+                      <span>{t('cancelOrder')}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -334,9 +621,10 @@ function ListingForm({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="mt-2 w-full bg-gray-100 hover:bg-gray-200 py-2 rounded-lg font-medium text-sm"
+                    className="mt-2 w-full bg-gray-100 hover:bg-gray-200 py-2 rounded-lg font-medium text-sm inline-flex items-center justify-center gap-2"
                   >
-                    📷 {t('retakePhoto')}
+                    <RefreshCw className="w-4 h-4" />
+                    <span>{t('retakePhoto')}</span>
                   </button>
                 </div>
               ) : (
@@ -345,7 +633,7 @@ function ListingForm({
                   onClick={() => fileInputRef.current?.click()}
                   className="w-full py-6 border-2 border-dashed border-green-300 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 font-medium flex flex-col items-center gap-2"
                 >
-                  <span className="text-3xl">📷</span>
+                  <Camera className="w-8 h-8" />
                   <span>{t('capturePhoto')}</span>
                 </button>
               )}

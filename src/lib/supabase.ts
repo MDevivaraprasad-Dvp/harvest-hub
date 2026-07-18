@@ -25,3 +25,19 @@ export type Review = {
   comment: string | null
   buyer_name: string
 }
+
+export type OrderStatus = 'pending' | 'completed' | 'cancelled'
+
+export type Order = {
+  id: number
+  created_at: string
+  farmer_phone: string
+  buyer_name: string
+  buyer_phone: string
+  listing_id: number | null
+  produce_name: string
+  quantity_kg: number
+  price_per_kg: number
+  status: OrderStatus
+  note: string | null
+}

@@ -2,6 +2,19 @@
 
 import { useEffect, useState, use } from 'react'
 import Link from 'next/link'
+import {
+  Sprout, MapPin, Phone, ArrowLeft, PenLine, Lock, Leaf, User,
+  BadgeCheck, Star, ShieldCheck, Zap,
+} from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import type { BadgeKind } from '@/lib/badges'
+
+const BADGE_ICONS: Record<BadgeKind, LucideIcon> = {
+  verified: BadgeCheck,
+  top_rated: Star,
+  active: Zap,
+  trusted: ShieldCheck,
+}
 import { supabase, type Listing, type Review } from '@/lib/supabase'
 import { useLanguage, LanguageSelector } from '@/lib/LanguageContext'
 import { computeBadges, averageRating } from '@/lib/badges'
@@ -52,25 +65,28 @@ export default function FarmerProfilePage({ params }: { params: Promise<{ phone:
   return (
     <div className="min-h-screen bg-green-50">
       <header className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="w-full px-6 lg:px-10 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <span className="text-2xl">🌾</span>
+            <div className="w-9 h-9 rounded-lg bg-green-600 flex items-center justify-center">
+              <Sprout className="w-5 h-5 text-white" />
+            </div>
             <span className="text-xl font-bold text-green-800">{t('appName')}</span>
           </Link>
           <LanguageSelector />
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-8">
-        <Link href="/buyer" className="text-sm text-green-700 hover:underline mb-4 inline-block">
-          ← {t('backToMarketplace')}
+      <main className="max-w-5xl mx-auto px-6 py-8">
+        <Link href="/buyer" className="text-sm text-green-700 hover:underline mb-4 inline-flex items-center gap-1">
+          <ArrowLeft className="w-4 h-4" />
+          <span>{t('backToMarketplace')}</span>
         </Link>
 
         {loading ? (
           <p className="text-gray-500 mt-8">{t('loading')}</p>
         ) : !farmerName ? (
           <div className="bg-white rounded-2xl shadow-sm p-12 text-center mt-8">
-            <div className="text-5xl mb-4">🤔</div>
+            <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-600">{t('farmerNotFound')}</p>
           </div>
         ) : (
@@ -79,7 +95,10 @@ export default function FarmerProfilePage({ params }: { params: Promise<{ phone:
               <div className="flex items-start justify-between flex-wrap gap-4">
                 <div>
                   <h1 className="text-3xl font-bold text-green-900">{farmerName}</h1>
-                  <p className="text-gray-600 mt-1">📞 {decodedPhone}</p>
+                  <p className="text-gray-600 mt-1 inline-flex items-center gap-1">
+                    <Phone className="w-4 h-4" />
+                    <span>{decodedPhone}</span>
+                  </p>
                   {earliestListing && (
                     <p className="text-xs text-gray-500 mt-1">
                       {t('activeSince')} {new Date(earliestListing.created_at).toLocaleDateString()}
@@ -96,15 +115,18 @@ export default function FarmerProfilePage({ params }: { params: Promise<{ phone:
 
               {badges.length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {badges.map((b) => (
-                    <span
-                      key={b.kind}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800"
-                    >
-                      <span>{b.emoji}</span>
-                      <span>{t(b.labelKey)}</span>
-                    </span>
-                  ))}
+                  {badges.map((b) => {
+                    const Icon = BADGE_ICONS[b.kind]
+                    return (
+                      <span
+                        key={b.kind}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800"
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        <span>{t(b.labelKey)}</span>
+                      </span>
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -114,15 +136,15 @@ export default function FarmerProfilePage({ params }: { params: Promise<{ phone:
                 <h2 className="text-xl font-bold text-green-900 mb-4">
                   {t('listingsCount')} ({listings.length})
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {listings.map((l) => (
                     <div key={l.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
                       {l.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={l.image_url} alt={l.produce_name} className="w-full h-32 object-cover" />
                       ) : (
-                        <div className="w-full h-32 bg-linear-to-br from-green-100 to-green-200 flex items-center justify-center text-4xl">
-                          🥬
+                        <div className="w-full h-32 bg-linear-to-br from-green-100 to-green-200 flex items-center justify-center">
+                          <Leaf className="w-10 h-10 text-green-600" />
                         </div>
                       )}
                       <div className="p-3">
@@ -143,9 +165,10 @@ export default function FarmerProfilePage({ params }: { params: Promise<{ phone:
                 <h2 className="text-xl font-bold text-green-900">{t('ratingsAndReviews')}</h2>
                 <button
                   onClick={() => setShowReviewForm(true)}
-                  className="bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2 rounded-lg"
+                  className="bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2 rounded-lg inline-flex items-center gap-2"
                 >
-                  ✍️ {t('leaveReview')}
+                  <PenLine className="w-4 h-4" />
+                  <span>{t('leaveReview')}</span>
                 </button>
               </div>
 
@@ -202,14 +225,19 @@ function ReviewForm({
 }) {
   const { t } = useLanguage()
   const [buyerName, setBuyerName] = useState('')
+  const [buyerPhone, setBuyerPhone] = useState('')
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const stored = localStorage.getItem('farmeasy_buyer_name')
-    if (stored) setBuyerName(stored)
+    const stored = localStorage.getItem('farmeasy_buyer')
+    if (stored) {
+      const b = JSON.parse(stored) as { name: string; phone: string }
+      setBuyerName(b.name)
+      setBuyerPhone(b.phone)
+    }
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -218,7 +246,28 @@ function ReviewForm({
     if (rating === 0) return setError(t('ratingRequired'))
 
     setSubmitting(true)
-    localStorage.setItem('farmeasy_buyer_name', buyerName.trim())
+
+    const { count, error: checkErr } = await supabase
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('farmer_phone', farmerPhone)
+      .eq('buyer_phone', buyerPhone.trim())
+      .eq('status', 'completed')
+
+    if (checkErr) {
+      setSubmitting(false)
+      return setError(checkErr.message)
+    }
+    if (!count || count === 0) {
+      setSubmitting(false)
+      return setError(t('notEligible'))
+    }
+
+    localStorage.setItem('farmeasy_buyer', JSON.stringify({
+      name: buyerName.trim(),
+      phone: buyerPhone.trim(),
+    }))
+
     const { error: dbErr } = await supabase.from('reviews').insert({
       farmer_phone: farmerPhone,
       rating,
@@ -233,9 +282,14 @@ function ReviewForm({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
+      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
-          <h2 className="text-xl font-bold text-green-900 mb-4">{t('leaveReview')}</h2>
+          <h2 className="text-xl font-bold text-green-900 mb-2">{t('leaveReview')}</h2>
+          <p className="text-xs text-gray-500 mb-4 flex items-start gap-1.5">
+            <Lock className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+            <span>{t('reviewGateInfo')}</span>
+          </p>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('yourName')}</label>
@@ -245,6 +299,18 @@ function ReviewForm({
                 value={buyerName}
                 onChange={(e) => setBuyerName(e.target.value)}
                 placeholder={t('yourNamePlaceholder')}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('yourPhone')}</label>
+              <input
+                type="tel"
+                required
+                value={buyerPhone}
+                onChange={(e) => setBuyerPhone(e.target.value)}
+                placeholder={t('phonePlaceholder')}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
               />
             </div>
@@ -285,7 +351,7 @@ function ReviewForm({
                 disabled={submitting}
                 className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg disabled:opacity-50"
               >
-                {submitting ? t('submittingReview') : t('submitReview')}
+                {submitting ? t('checkingEligibility') : t('submitReview')}
               </button>
             </div>
           </form>
