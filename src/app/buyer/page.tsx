@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { supabase, type Listing } from '@/lib/supabase'
+import { useLanguage, LanguageSelector } from '@/lib/LanguageContext'
 
 export default function BuyerPage() {
+  const { t } = useLanguage()
   const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -43,22 +45,25 @@ export default function BuyerPage() {
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <span className="text-2xl">🌾</span>
-            <span className="text-xl font-bold text-green-800">FarmEasy</span>
+            <span className="text-xl font-bold text-green-800">{t('appName')}</span>
           </Link>
-          <span className="text-sm text-gray-600">Buyer Marketplace</span>
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:inline text-sm text-gray-600">{t('buyerMarketplace')}</span>
+            <LanguageSelector />
+          </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-8">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-green-900">Fresh from the Farm</h1>
-          <p className="text-gray-600 mt-1">Browse produce directly from farmers near you.</p>
+          <h1 className="text-3xl font-bold text-green-900">{t('freshFromFarm')}</h1>
+          <p className="text-gray-600 mt-1">{t('browseSubtitle')}</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm p-4 mb-6 flex flex-col sm:flex-row gap-3">
           <input
             type="text"
-            placeholder="🔍 Search produce (e.g. tomato)"
+            placeholder={t('searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
@@ -68,7 +73,7 @@ export default function BuyerPage() {
             onChange={(e) => setLocationFilter(e.target.value)}
             className="px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none bg-white"
           >
-            <option value="">All Locations</option>
+            <option value="">{t('allLocations')}</option>
             {locations.map((loc) => (
               <option key={loc} value={loc}>{loc}</option>
             ))}
@@ -76,14 +81,12 @@ export default function BuyerPage() {
         </div>
 
         {loading ? (
-          <p className="text-gray-500">Loading fresh produce...</p>
+          <p className="text-gray-500">{t('loadingProduce')}</p>
         ) : filtered.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
             <div className="text-5xl mb-4">🥬</div>
             <p className="text-gray-600">
-              {listings.length === 0
-                ? 'No listings yet. Check back soon!'
-                : 'No listings match your filters.'}
+              {listings.length === 0 ? t('noListingsPublic') : t('noListingsFilter')}
             </p>
           </div>
         ) : (
@@ -106,24 +109,24 @@ export default function BuyerPage() {
                     </div>
                   </div>
                   <p className="text-sm text-gray-600 mt-1">📍 {l.location}</p>
-                  <p className="text-sm text-gray-500 mt-1">🌾 {l.quantity_kg} kg available</p>
+                  <p className="text-sm text-gray-500 mt-1">🌾 {l.quantity_kg} {t('kgAvailable')}</p>
                   <div className="mt-3 pt-3 border-t border-gray-100">
                     <p className="text-sm text-gray-700">
-                      <span className="font-medium">Farmer:</span> {l.farmer_name}
+                      <span className="font-medium">{t('farmer')}:</span> {l.farmer_name}
                     </p>
                     {revealedPhone[l.id] ? (
                       <a
                         href={`tel:${l.farmer_phone}`}
                         className="mt-3 block w-full bg-green-600 hover:bg-green-700 text-white text-center font-semibold py-2.5 rounded-lg transition-colors"
                       >
-                        📞 Call {l.farmer_phone}
+                        📞 {t('call')} {l.farmer_phone}
                       </a>
                     ) : (
                       <button
                         onClick={() => setRevealedPhone((p) => ({ ...p, [l.id]: true }))}
                         className="mt-3 w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg transition-colors"
                       >
-                        Contact Farmer
+                        {t('contactFarmer')}
                       </button>
                     )}
                   </div>
