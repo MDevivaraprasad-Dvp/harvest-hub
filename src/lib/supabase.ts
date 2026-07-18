@@ -16,3 +16,12 @@ export type Listing = {
   location: string
   image_url: string | null
 }
+
+export type Review = {
+  id: number
+  created_at: string
+  farmer_phone: string
+  rating: number
+  comment: string | null
+  buyer_name: string
+}

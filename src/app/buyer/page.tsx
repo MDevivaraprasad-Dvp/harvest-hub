@@ -2,29 +2,49 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { supabase, type Listing } from '@/lib/supabase'
+import { supabase, type Listing, type Review } from '@/lib/supabase'
 import { useLanguage, LanguageSelector } from '@/lib/LanguageContext'
+import { RatingSummary } from '@/components/StarRating'
+
+type FarmerStats = { average: number | null; count: number }
 
 export default function BuyerPage() {
   const { t } = useLanguage()
   const [listings, setListings] = useState<Listing[]>([])
+  const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [locationFilter, setLocationFilter] = useState('')
   const [revealedPhone, setRevealedPhone] = useState<Record<number, boolean>>({})
 
   useEffect(() => {
-    const fetchListings = async () => {
-      const { data, error } = await supabase
-        .from('listings')
-        .select('*')
-        .order('created_at', { ascending: false })
-      if (error) console.error(error)
-      setListings(data ?? [])
+    const fetchAll = async () => {
+      const [lRes, rRes] = await Promise.all([
+        supabase.from('listings').select('*').order('created_at', { ascending: false }),
+        supabase.from('reviews').select('*'),
+      ])
+      if (lRes.error) console.error(lRes.error)
+      if (rRes.error) console.error(rRes.error)
+      setListings(lRes.data ?? [])
+      setReviews(rRes.data ?? [])
       setLoading(false)
     }
-    fetchListings()
+    fetchAll()
   }, [])
+
+  const farmerStats = useMemo(() => {
+    const map = new Map<string, FarmerStats>()
+    for (const r of reviews) {
+      const s = map.get(r.farmer_phone) ?? { average: 0, count: 0 }
+      s.average = (s.average ?? 0) + r.rating
+      s.count += 1
+      map.set(r.farmer_phone, s)
+    }
+    for (const [k, s] of map) {
+      map.set(k, { average: s.count > 0 ? (s.average ?? 0) / s.count : null, count: s.count })
+    }
+    return map
+  }, [reviews])
 
   const locations = useMemo(() => {
     const set = new Set(listings.map((l) => l.location))
@@ -91,48 +111,66 @@ export default function BuyerPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((l) => (
-              <div key={l.id} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                {l.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={l.image_url} alt={l.produce_name} className="w-full h-48 object-cover" />
-                ) : (
-                  <div className="w-full h-48 bg-linear-to-br from-green-100 to-green-200 flex items-center justify-center text-6xl">
-                    🥬
-                  </div>
-                )}
-                <div className="p-4">
-                  <div className="flex items-start justify-between">
-                    <h3 className="font-bold text-lg text-green-900">{l.produce_name}</h3>
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-green-700">₹{l.price_per_kg}<span className="text-xs font-normal text-gray-500">/kg</span></div>
+            {filtered.map((l) => {
+              const stats = farmerStats.get(l.farmer_phone)
+              return (
+                <div key={l.id} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                  {l.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={l.image_url} alt={l.produce_name} className="w-full h-48 object-cover" />
+                  ) : (
+                    <div className="w-full h-48 bg-linear-to-br from-green-100 to-green-200 flex items-center justify-center text-6xl">
+                      🥬
+                    </div>
+                  )}
+                  <div className="p-4">
+                    <div className="flex items-start justify-between">
+                      <h3 className="font-bold text-lg text-green-900">{l.produce_name}</h3>
+                      <div className="text-right">
+                        <div className="text-xl font-bold text-green-700">₹{l.price_per_kg}<span className="text-xs font-normal text-gray-500">/kg</span></div>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">📍 {l.location}</p>
+                    <p className="text-sm text-gray-500 mt-1">🌾 {l.quantity_kg} {t('kgAvailable')}</p>
+
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-700">
+                            <span className="font-medium">{t('farmer')}:</span> {l.farmer_name}
+                          </p>
+                          <div className="mt-0.5">
+                            <RatingSummary average={stats?.average ?? null} count={stats?.count ?? 0} />
+                          </div>
+                        </div>
+                        <Link
+                          href={`/farmer/${encodeURIComponent(l.farmer_phone)}`}
+                          className="text-xs text-green-700 hover:underline whitespace-nowrap"
+                        >
+                          {t('viewProfile')} →
+                        </Link>
+                      </div>
+
+                      {revealedPhone[l.id] ? (
+                        <a
+                          href={`tel:${l.farmer_phone}`}
+                          className="mt-3 block w-full bg-green-600 hover:bg-green-700 text-white text-center font-semibold py-2.5 rounded-lg transition-colors"
+                        >
+                          📞 {t('call')} {l.farmer_phone}
+                        </a>
+                      ) : (
+                        <button
+                          onClick={() => setRevealedPhone((p) => ({ ...p, [l.id]: true }))}
+                          className="mt-3 w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg transition-colors"
+                        >
+                          {t('contactFarmer')}
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600 mt-1">📍 {l.location}</p>
-                  <p className="text-sm text-gray-500 mt-1">🌾 {l.quantity_kg} {t('kgAvailable')}</p>
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <p className="text-sm text-gray-700">
-                      <span className="font-medium">{t('farmer')}:</span> {l.farmer_name}
-                    </p>
-                    {revealedPhone[l.id] ? (
-                      <a
-                        href={`tel:${l.farmer_phone}`}
-                        className="mt-3 block w-full bg-green-600 hover:bg-green-700 text-white text-center font-semibold py-2.5 rounded-lg transition-colors"
-                      >
-                        📞 {t('call')} {l.farmer_phone}
-                      </a>
-                    ) : (
-                      <button
-                        onClick={() => setRevealedPhone((p) => ({ ...p, [l.id]: true }))}
-                        className="mt-3 w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg transition-colors"
-                      >
-                        {t('contactFarmer')}
-                      </button>
-                    )}
-                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </main>
