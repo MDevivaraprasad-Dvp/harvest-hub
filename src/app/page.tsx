@@ -10,6 +10,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { useLanguage, LanguageSelector } from '@/lib/LanguageContext'
 import { HeroIllustration } from '@/components/HeroIllustration'
+import { FarmToMarketStory } from '@/components/FarmToMarketStory'
 import { supabase, type Listing } from '@/lib/supabase'
 
 type Stats = { farmers: number; kg: number; locations: number }
@@ -70,6 +71,7 @@ export default function Home() {
         <main className="flex-1 bg-white border-x-4 sm:border-x-6 lg:border-x-8 border-b-4 sm:border-b-6 lg:border-b-8 border-green-600 rounded-b-[36px] sm:rounded-b-[44px] shadow-2xl -mt-4 sm:-mt-5 lg:-mt-6 mx-3 sm:mx-6 lg:mx-10 relative z-0 overflow-y-auto overflow-x-hidden min-h-0">
           <div className="px-6 sm:px-10 lg:px-14 py-10 lg:py-14 space-y-20 lg:space-y-28">
             <HeroSection />
+            <FarmToMarketStory />
             <ProblemSolutionSection />
             <HowItWorksSection />
             <FeaturedSection listings={featured} />

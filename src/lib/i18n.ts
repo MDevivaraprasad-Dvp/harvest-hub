@@ -73,6 +73,10 @@ export const translations = {
     ctaTitle: 'Ready to grow with us?',
     ctaSubtitle: 'Join farmers and buyers connecting directly across India.',
 
+    // Landing — Journey animation
+    journeyTitle: 'From Field to Cart',
+    journeySubtitle: 'See how FarmEasy moves produce from the farmer straight to the buyer.',
+
     // Farmer
     welcomeFarmer: 'Welcome, Farmer!',
     signInPrompt: 'Enter your details to start listing your produce.',
@@ -338,6 +342,9 @@ export const translations = {
     ctaTitle: 'हमारे साथ बढ़ने के लिए तैयार?',
     ctaSubtitle: 'सीधे जुड़ने वाले किसानों और खरीदारों के साथ जुड़ें।',
 
+    journeyTitle: 'खेत से कार्ट तक',
+    journeySubtitle: 'देखें कैसे फार्मईज़ी किसान से सीधे खरीदार तक उपज पहुँचाता है।',
+
     welcomeFarmer: 'स्वागत है, किसान जी!',
     signInPrompt: 'अपनी उपज सूचीबद्ध करने के लिए अपना विवरण दर्ज करें।',
     yourName: 'आपका नाम',
@@ -590,6 +597,9 @@ export const translations = {
     ctaTitle: 'మాతో కలిసి పెరగడానికి సిద్ధమా?',
     ctaSubtitle: 'నేరుగా కనెక్ట్ అవుతున్న రైతులు మరియు కొనుగోలుదారులతో చేరండి.',
 
+    journeyTitle: 'పొలం నుండి కార్ట్ వరకు',
+    journeySubtitle: 'ఫార్మ్‌ఈజీ రైతు నుండి కొనుగోలుదారుకి ఉత్పత్తులను ఎలా చేరుస్తుందో చూడండి.',
+
     welcomeFarmer: 'స్వాగతం, రైతు గారు!',
     signInPrompt: 'మీ ఉత్పత్తులను జాబితా చేయడానికి మీ వివరాలను నమోదు చేయండి.',
     yourName: 'మీ పేరు',
@@ -841,6 +851,9 @@ export const translations = {
 
     ctaTitle: 'எங்களுடன் வளர தயாரா?',
     ctaSubtitle: 'நேரடியாக இணைக்கும் விவசாயிகள் மற்றும் வாங்குபவர்களுடன் சேருங்கள்.',
+
+    journeyTitle: 'வயலிலிருந்து வண்டி வரை',
+    journeySubtitle: 'பார்ம்ஈஸி விவசாயியிடமிருந்து நேரடியாக வாங்குபவருக்கு விளைபொருட்களை எப்படி எடுத்துச் செல்கிறது என்பதைப் பாருங்கள்.',
 
     welcomeFarmer: 'வரவேற்பு, விவசாயி!',
     signInPrompt: 'உங்கள் விளைபொருட்களை பட்டியலிட உங்கள் விவரங்களை உள்ளிடவும்.',

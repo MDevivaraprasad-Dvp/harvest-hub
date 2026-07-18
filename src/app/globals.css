@@ -56,3 +56,31 @@ body {
 .animate-drift-x { animation: drift-x 6s ease-in-out infinite; }
 .animate-spin-slow { animation: spin-slow 22s linear infinite; }
 .animate-count-in { animation: count-in 0.6s ease-out both; }
+
+@keyframes journey-basket {
+  0%   { transform: translate(295px, 240px) scale(0.85); opacity: 0; }
+  10%  { opacity: 1; }
+  50%  { transform: translate(400px, 200px) scale(1); }
+  90%  { transform: translate(505px, 230px) scale(0.85); opacity: 1; }
+  100% { transform: translate(505px, 230px) scale(0.85); opacity: 0; }
+}
+@keyframes cloud-drift {
+  0%, 100% { transform: translateX(-30px); }
+  50%      { transform: translateX(30px); }
+}
+@keyframes crop-grow {
+  0%, 100% { transform: scaleY(0.7); }
+  50%      { transform: scaleY(1); }
+}
+@keyframes water-drop {
+  0%   { transform: translateY(-2px); opacity: 0; }
+  30%  { opacity: 1; }
+  100% { transform: translateY(14px); opacity: 0; }
+}
+
+.animate-journey-basket { animation: journey-basket 4.5s ease-in-out infinite; }
+.animate-cloud-drift { animation: cloud-drift 18s ease-in-out infinite; }
+.animate-crop-grow { animation: crop-grow 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: bottom; }
+.animate-water-drop { animation: water-drop 1.6s ease-in infinite; }
+.svg-origin-center { transform-box: fill-box; transform-origin: center; }
+.svg-origin-bottom { transform-box: fill-box; transform-origin: bottom; }
