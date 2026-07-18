@@ -5,10 +5,12 @@ import Link from 'next/link'
 import {
   Sprout, Tractor, Camera, MapPin, Plus, Pencil, Trash2,
   Phone, Package, ArrowRight, X, Check, LogOut, RefreshCw,
+  BarChart3, Handshake,
 } from 'lucide-react'
 import { supabase, type Listing, type Order, type OrderStatus } from '@/lib/supabase'
 import { useLanguage, LanguageSelector } from '@/lib/LanguageContext'
 import { MarketInsights } from '@/components/MarketInsights'
+import { ListingAnalytics } from '@/components/ListingAnalytics'
 
 type FarmerProfile = { name: string; phone: string }
 
@@ -130,7 +132,11 @@ function SignInForm({ onSignIn }: { onSignIn: (name: string, phone: string) => v
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (name.trim() && phone.trim()) onSignIn(name.trim(), phone.trim())
+    if (name.trim() && phone.trim()) {
+      onSignIn(name.trim(), phone.trim())
+      setName('')
+      setPhone('')
+    }
   }
 
   return (
@@ -181,7 +187,7 @@ function Dashboard({ profile }: { profile: FarmerProfile }) {
         .from('orders')
         .select('*', { count: 'exact', head: true })
         .eq('farmer_phone', profile.phone)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'negotiating'])
       setPendingCount(count ?? 0)
     }
     loadPendingCount()
@@ -251,6 +257,7 @@ function ListingsView({ profile }: { profile: FarmerProfile }) {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Listing | null>(null)
+  const [analyticsListing, setAnalyticsListing] = useState<Listing | null>(null)
 
   const fetchListings = async () => {
     setLoading(true)
@@ -345,10 +352,24 @@ function ListingsView({ profile }: { profile: FarmerProfile }) {
                     <span>{t('delete')}</span>
                   </button>
                 </div>
+                <button
+                  onClick={() => setAnalyticsListing(l)}
+                  className="mt-2 w-full text-sm bg-green-50 hover:bg-green-100 text-green-800 py-2 rounded-lg font-medium inline-flex items-center justify-center gap-1"
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span>{t('viewAnalytics')}</span>
+                </button>
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {analyticsListing && (
+        <ListingAnalytics
+          listing={analyticsListing}
+          onClose={() => setAnalyticsListing(null)}
+        />
       )}
     </div>
   )
@@ -358,6 +379,7 @@ function OrdersView({ profile }: { profile: FarmerProfile }) {
   const { t } = useLanguage()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+  const [counteringOrder, setCounteringOrder] = useState<Order | null>(null)
 
   const fetchOrders = async () => {
     setLoading(true)
@@ -382,6 +404,43 @@ function OrdersView({ profile }: { profile: FarmerProfile }) {
     fetchOrders()
   }
 
+  const acceptOffer = async (o: Order) => {
+    if (!confirm(t('confirmAcceptOffer'))) return
+    const agreed = o.offered_price ?? o.price_per_kg
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'pending', price_per_kg: agreed })
+        .eq('id', o.id)
+      if (error) {
+        console.error('acceptOffer failed', error)
+        alert(error.message || 'Update failed')
+        return
+      }
+      fetchOrders()
+    } catch (e) {
+      console.error('acceptOffer threw', e)
+      alert(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  const rejectOffer = async (o: Order) => {
+    if (!confirm(t('confirmRejectOffer'))) return
+    try {
+      const { error } = await supabase.from('orders').update({ status: 'cancelled' }).eq('id', o.id)
+      if (error) {
+        console.error('rejectOffer failed', error)
+        alert(error.message || 'Update failed')
+        return
+      }
+      fetchOrders()
+    } catch (e) {
+      console.error('rejectOffer threw', e)
+      alert(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  const groupedNegotiating = orders.filter((o) => o.status === 'negotiating' || o.status === 'counter_offered')
   const groupedPending = orders.filter((o) => o.status === 'pending')
   const groupedCompleted = orders.filter((o) => o.status === 'completed')
   const groupedCancelled = orders.filter((o) => o.status === 'cancelled')
@@ -401,6 +460,15 @@ function OrdersView({ profile }: { profile: FarmerProfile }) {
         </div>
       ) : (
         <div className="space-y-8">
+          {groupedNegotiating.length > 0 && (
+            <OrderGroup
+              title={t('negotiationPending')}
+              orders={groupedNegotiating}
+              onAcceptOffer={acceptOffer}
+              onRejectOffer={rejectOffer}
+              onCounterOffer={setCounteringOrder}
+            />
+          )}
           {groupedPending.length > 0 && (
             <OrderGroup
               title={t('pendingOrders')}
@@ -417,6 +485,116 @@ function OrdersView({ profile }: { profile: FarmerProfile }) {
           )}
         </div>
       )}
+
+      {counteringOrder && (
+        <CounterOfferModal
+          order={counteringOrder}
+          onClose={() => setCounteringOrder(null)}
+          onSent={() => { setCounteringOrder(null); fetchOrders() }}
+        />
+      )}
+    </div>
+  )
+}
+
+function CounterOfferModal({
+  order,
+  onClose,
+  onSent,
+}: {
+  order: Order
+  onClose: () => void
+  onSent: () => void
+}) {
+  const { t } = useLanguage()
+  const [price, setPrice] = useState(
+    order.offered_price != null ? String(order.offered_price) : String(order.price_per_kg)
+  )
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    const num = parseFloat(price)
+    if (isNaN(num) || num <= 0) return setError(t('quantityRequired'))
+    setSubmitting(true)
+    const { error: dbErr } = await supabase
+      .from('orders')
+      .update({ status: 'counter_offered', counter_price: num })
+      .eq('id', order.id)
+    setSubmitting(false)
+    if (dbErr) return setError(dbErr.message)
+    onSent()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
+        <div className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-bold text-green-900">{t('counterOffer')}</h2>
+              <p className="text-sm text-gray-600 mt-0.5">
+                {order.produce_name} · {order.buyer_name}
+              </p>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Close">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="bg-gray-50 rounded-lg p-3 text-sm mb-4">
+            <div className="flex justify-between">
+              <span className="text-gray-600">{t('listedAt')}</span>
+              <span className="font-semibold text-gray-900">₹{order.price_per_kg}/kg</span>
+            </div>
+            {order.offered_price != null && (
+              <div className="flex justify-between mt-1">
+                <span className="text-gray-600">{t('yourOffer').replace('Your', "Buyer's")}</span>
+                <span className="font-semibold text-blue-700">₹{order.offered_price}/kg</span>
+              </div>
+            )}
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('counterPriceLabel')}</label>
+              <input
+                type="number"
+                required
+                step="0.5"
+                min="0.5"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+              />
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-3 rounded-lg">{error}</div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={submitting}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 font-medium py-3 rounded-lg disabled:opacity-50"
+              >
+                {t('cancel')}
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg disabled:opacity-50"
+              >
+                {submitting ? t('saving') : t('submitCounter')}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   )
 }
@@ -426,11 +604,17 @@ function OrderGroup({
   orders,
   onMarkCompleted,
   onCancel,
+  onAcceptOffer,
+  onRejectOffer,
+  onCounterOffer,
 }: {
   title: string
   orders: Order[]
   onMarkCompleted?: (id: number) => void
   onCancel?: (id: number) => void
+  onAcceptOffer?: (o: Order) => void
+  onRejectOffer?: (o: Order) => void
+  onCounterOffer?: (o: Order) => void
 }) {
   const { t } = useLanguage()
   return (
@@ -439,18 +623,14 @@ function OrderGroup({
       <div className="space-y-3">
         {orders.map((o) => {
           const total = o.quantity_kg * o.price_per_kg
-          const statusColor =
-            o.status === 'pending'
-              ? 'bg-yellow-100 text-yellow-800'
-              : o.status === 'completed'
-              ? 'bg-green-100 text-green-800'
-              : 'bg-gray-100 text-gray-600'
-          const statusLabel =
-            o.status === 'pending'
-              ? t('orderStatusPending')
-              : o.status === 'completed'
-              ? t('orderStatusCompleted')
-              : t('orderStatusCancelled')
+          const statusMeta: Record<OrderStatus, { cls: string; label: string }> = {
+            pending: { cls: 'bg-yellow-100 text-yellow-800', label: t('orderStatusPending') },
+            completed: { cls: 'bg-green-100 text-green-800', label: t('orderStatusCompleted') },
+            cancelled: { cls: 'bg-gray-100 text-gray-600', label: t('orderStatusCancelled') },
+            negotiating: { cls: 'bg-blue-100 text-blue-800', label: t('orderStatusNegotiating') },
+            counter_offered: { cls: 'bg-purple-100 text-purple-800', label: t('orderStatusCounterOffered') },
+          }
+          const meta = statusMeta[o.status] ?? { cls: 'bg-gray-100 text-gray-600', label: String(o.status) }
 
           return (
             <div key={o.id} className="bg-white rounded-xl shadow-sm p-4">
@@ -458,8 +638,8 @@ function OrderGroup({
                 <div className="flex-1 min-w-[200px]">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-semibold text-green-900">{o.produce_name}</h3>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusColor}`}>
-                      {statusLabel}
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${meta.cls}`}>
+                      {meta.label}
                     </span>
                   </div>
                   <p className="text-sm text-gray-700 mt-1">
@@ -479,25 +659,74 @@ function OrderGroup({
                   <p className="text-xs text-gray-400 mt-2">
                     {new Date(o.created_at).toLocaleString()}
                   </p>
+
+                  {o.status === 'negotiating' && o.offered_price != null && (
+                    <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-900">
+                      <div className="font-semibold inline-flex items-center gap-1 mb-1">
+                        <Handshake className="w-3.5 h-3.5" />
+                        {t('yourOffer').replace('Your', "Buyer's")}: ₹{o.offered_price}/kg
+                      </div>
+                      <p className="text-xs">
+                        {t('listedAt')} ₹{o.price_per_kg}/kg
+                      </p>
+                    </div>
+                  )}
+
+                  {o.status === 'counter_offered' && o.counter_price != null && (
+                    <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm text-purple-900">
+                      <div className="font-semibold inline-flex items-center gap-1">
+                        <Handshake className="w-3.5 h-3.5" />
+                        {t('awaitingFarmer').replace('farmer', 'buyer')} · ₹{o.counter_price}/kg
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {onMarkCompleted && onCancel && (
-                  <div className="flex gap-2 shrink-0">
-                    <button
-                      onClick={() => onMarkCompleted(o.id)}
-                      className="text-sm bg-green-600 hover:bg-green-700 text-white font-medium px-3 py-2 rounded-lg inline-flex items-center gap-1"
-                    >
-                      <Check className="w-4 h-4" />
-                      <span>{t('markCompleted')}</span>
-                    </button>
-                    <button
-                      onClick={() => onCancel(o.id)}
-                      className="text-sm bg-red-50 hover:bg-red-100 text-red-700 font-medium px-3 py-2 rounded-lg inline-flex items-center gap-1"
-                    >
-                      <X className="w-4 h-4" />
-                      <span>{t('cancelOrder')}</span>
-                    </button>
-                  </div>
-                )}
+
+                <div className="flex flex-col gap-2 shrink-0">
+                  {onMarkCompleted && onCancel && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => onMarkCompleted(o.id)}
+                        className="text-sm bg-green-600 hover:bg-green-700 text-white font-medium px-3 py-2 rounded-lg inline-flex items-center gap-1"
+                      >
+                        <Check className="w-4 h-4" />
+                        <span>{t('markCompleted')}</span>
+                      </button>
+                      <button
+                        onClick={() => onCancel(o.id)}
+                        className="text-sm bg-red-50 hover:bg-red-100 text-red-700 font-medium px-3 py-2 rounded-lg inline-flex items-center gap-1"
+                      >
+                        <X className="w-4 h-4" />
+                        <span>{t('cancelOrder')}</span>
+                      </button>
+                    </div>
+                  )}
+                  {o.status === 'negotiating' && onAcceptOffer && onRejectOffer && onCounterOffer && (
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => onAcceptOffer(o)}
+                        className="text-sm bg-green-600 hover:bg-green-700 text-white font-medium px-3 py-2 rounded-lg inline-flex items-center gap-1"
+                      >
+                        <Check className="w-4 h-4" />
+                        <span>{t('acceptOffer')}</span>
+                      </button>
+                      <button
+                        onClick={() => onCounterOffer(o)}
+                        className="text-sm bg-purple-600 hover:bg-purple-700 text-white font-medium px-3 py-2 rounded-lg inline-flex items-center gap-1"
+                      >
+                        <Handshake className="w-4 h-4" />
+                        <span>{t('counterOffer')}</span>
+                      </button>
+                      <button
+                        onClick={() => onRejectOffer(o)}
+                        className="text-sm bg-red-50 hover:bg-red-100 text-red-700 font-medium px-3 py-2 rounded-lg inline-flex items-center gap-1"
+                      >
+                        <X className="w-4 h-4" />
+                        <span>{t('rejectOffer')}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )
@@ -537,6 +766,23 @@ function ListingForm({
     setImageFile(file)
     setPreviewUrl(URL.createObjectURL(file))
     setImageUrl('')
+  }
+
+  const resetForm = () => {
+    setProduceName('')
+    setQuantityKg('')
+    setPricePerKg('')
+    setLocation('')
+    setImageUrl('')
+    setImageFile(null)
+    setPreviewUrl(null)
+    setError(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handleCancel = () => {
+    resetForm()
+    onClose()
   }
 
   const uploadImage = async (): Promise<string | null> => {
@@ -592,6 +838,7 @@ function ListingForm({
       : await supabase.from('listings').insert(payload)
     setSaving(false)
     if (dbErr) return setError(dbErr.message)
+    resetForm()
     onSaved()
   }
 
@@ -657,7 +904,7 @@ function ListingForm({
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleCancel}
                 disabled={saving || uploading}
                 className="flex-1 bg-gray-100 hover:bg-gray-200 font-medium py-3 rounded-lg disabled:opacity-50"
               >

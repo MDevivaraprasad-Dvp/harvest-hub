@@ -112,7 +112,23 @@ export function MarketInsights() {
   }, [orders, listings])
 
   if (loading) {
-    return <p className="text-gray-500">{t('loading')}</p>
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-xl shadow-sm p-4 animate-pulse">
+              <div className="h-4 w-2/3 bg-gray-100 rounded mb-3" />
+              <div className="h-7 w-1/2 bg-gray-200 rounded" />
+            </div>
+          ))}
+        </div>
+        <div className="bg-white rounded-2xl shadow-sm p-5 animate-pulse">
+          <div className="h-5 w-1/3 bg-gray-200 rounded mb-2" />
+          <div className="h-3 w-1/2 bg-gray-100 rounded mb-6" />
+          <div className="h-64 bg-gray-100 rounded" />
+        </div>
+      </div>
+    )
   }
 
   const hasData = orders.length > 0

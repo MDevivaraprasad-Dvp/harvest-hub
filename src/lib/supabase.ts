@@ -26,7 +26,12 @@ export type Review = {
   buyer_name: string
 }
 
-export type OrderStatus = 'pending' | 'completed' | 'cancelled'
+export type OrderStatus =
+  | 'pending'
+  | 'completed'
+  | 'cancelled'
+  | 'negotiating'
+  | 'counter_offered'
 
 export type Order = {
   id: number
@@ -40,4 +45,13 @@ export type Order = {
   price_per_kg: number
   status: OrderStatus
   note: string | null
+  offered_price: number | null
+  counter_price: number | null
+}
+
+export type ListingView = {
+  id: number
+  created_at: string
+  listing_id: number
+  viewer_phone: string | null
 }

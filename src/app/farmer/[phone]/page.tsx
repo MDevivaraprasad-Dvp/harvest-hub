@@ -19,6 +19,7 @@ import { supabase, type Listing, type Review } from '@/lib/supabase'
 import { useLanguage, LanguageSelector } from '@/lib/LanguageContext'
 import { computeBadges, averageRating } from '@/lib/badges'
 import { StarRating, RatingSummary } from '@/components/StarRating'
+import { FavoriteHeart } from '@/components/FavoriteHeart'
 
 export default function FarmerProfilePage({ params }: { params: Promise<{ phone: string }> }) {
   const { phone } = use(params)
@@ -83,7 +84,24 @@ export default function FarmerProfilePage({ params }: { params: Promise<{ phone:
         </Link>
 
         {loading ? (
-          <p className="text-gray-500 mt-8">{t('loading')}</p>
+          <div className="mt-8 space-y-6">
+            <div className="bg-white rounded-2xl shadow-sm p-6 animate-pulse">
+              <div className="h-8 w-1/2 bg-gray-200 rounded mb-3" />
+              <div className="h-4 w-1/3 bg-gray-100 rounded mb-2" />
+              <div className="h-3 w-1/4 bg-gray-100 rounded" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="bg-white rounded-xl shadow-sm overflow-hidden animate-pulse">
+                  <div className="w-full h-32 bg-gray-200" />
+                  <div className="p-3 space-y-2">
+                    <div className="h-4 w-2/3 bg-gray-200 rounded" />
+                    <div className="h-4 w-1/2 bg-gray-100 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         ) : !farmerName ? (
           <div className="bg-white rounded-2xl shadow-sm p-12 text-center mt-8">
             <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -138,7 +156,8 @@ export default function FarmerProfilePage({ params }: { params: Promise<{ phone:
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {listings.map((l) => (
-                    <div key={l.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div key={l.id} className="bg-white rounded-xl shadow-sm overflow-hidden relative">
+                      <FavoriteHeart listingId={l.id} className="absolute top-2 right-2 z-10 w-8 h-8 shadow-md" />
                       {l.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={l.image_url} alt={l.produce_name} className="w-full h-32 object-cover" />
@@ -148,10 +167,10 @@ export default function FarmerProfilePage({ params }: { params: Promise<{ phone:
                         </div>
                       )}
                       <div className="p-3">
-                        <h3 className="font-semibold text-green-900">{l.produce_name}</h3>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-sm text-gray-600">{l.quantity_kg} kg</span>
-                          <span className="text-lg font-bold text-green-700">₹{l.price_per_kg}/kg</span>
+                        <h3 className="font-semibold text-green-900 truncate" title={l.produce_name}>{l.produce_name}</h3>
+                        <div className="flex items-center justify-between mt-1 gap-2">
+                          <span className="text-sm text-gray-600 shrink-0">{l.quantity_kg} kg</span>
+                          <span className="text-lg font-bold text-green-700 shrink-0">₹{l.price_per_kg}/kg</span>
                         </div>
                       </div>
                     </div>
@@ -240,6 +259,17 @@ function ReviewForm({
     }
   }, [])
 
+  const resetForm = () => {
+    setRating(0)
+    setComment('')
+    setError(null)
+  }
+
+  const handleCancel = () => {
+    resetForm()
+    onClose()
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -276,6 +306,7 @@ function ReviewForm({
     })
     setSubmitting(false)
     if (dbErr) return setError(dbErr.message)
+    resetForm()
     alert(t('reviewSubmitted'))
     onSubmitted()
   }
@@ -316,7 +347,9 @@ function ReviewForm({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">{t('yourRating')}</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t('yourRating')} <span className="text-red-500">*</span>
+              </label>
               <StarRating value={rating} onChange={setRating} size="lg" />
             </div>
 
@@ -340,7 +373,7 @@ function ReviewForm({
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleCancel}
                 disabled={submitting}
                 className="flex-1 bg-gray-100 hover:bg-gray-200 font-medium py-3 rounded-lg disabled:opacity-50"
               >
