@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import {
   Sparkles, Send, MessageCircle, UserCog, Crown, Phone, MapPin,
-  ArrowRight, Bot, Zap, Users, IndianRupee, Check,
+  ArrowRight, Bot, Zap, Users, IndianRupee, Check, Handshake,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useLanguage } from '@/lib/LanguageContext'
@@ -203,6 +203,19 @@ export function KnowledgeNetwork() {
             </button>
           </form>
         )}
+      </section>
+
+      {/* AI + Human bridge */}
+      <section className="bg-linear-to-br from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-5 sm:p-6">
+        <div className="flex items-start gap-3">
+          <div className="w-11 h-11 rounded-xl bg-white shadow-sm flex items-center justify-center shrink-0 text-green-700">
+            <Handshake className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-green-900">{t('aiHumanTitle')}</h2>
+            <p className="text-sm text-gray-700 mt-1 leading-relaxed">{t('aiHumanBody')}</p>
+          </div>
+        </div>
       </section>
 
       {/* Expert farmers + engineers */}

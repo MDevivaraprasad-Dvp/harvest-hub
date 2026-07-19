@@ -100,7 +100,7 @@ export function Sidebar<Tkey extends string>({
 
   const footer = (
     <div className="p-3 border-t border-green-700/60 space-y-2">
-      <div className="[&_button]:!bg-green-800/40 [&_button]:!border-green-700/60 [&_button]:!text-white [&_button]:!font-semibold [&_svg]:!text-green-200">
+      <div className="[&>div>button]:!bg-green-800/40 [&>div>button]:!border-green-700/60 [&>div>button]:!text-white [&>div>button]:!font-semibold [&>div>button>svg]:!text-green-200">
         <LanguageSelector openUpward />
       </div>
       <Link

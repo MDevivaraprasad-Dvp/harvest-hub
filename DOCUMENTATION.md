@@ -32,7 +32,7 @@ This document walks through how FarmEasy works end-to-end: setting it up, using 
 |---|---|
 | **Spot marketplace** | Farmers list fresh produce with camera photos; buyers browse, favourite, negotiate, and order |
 | **Contract farming** | Buyers commit to future harvests with a deadline, quantity, and funding; farmers accept and fulfill |
-| **Knowledge Network** | AI-assisted farming Q&A (prototype) + directory of expert farmers and agri-engineers |
+| **Knowledge Network** | **AI + Human, working together** — AI handles quick FAQs (capped at 5/day); expert farmers and agri-engineers handle complex, local questions via one-tap-to-call. Cap is intentional so the app stays affordable and human experts stay in the loop. |
 
 Everything is multilingual (English, Hindi, Telugu, Tamil) and works on mobile as a lightweight web app — no install, no auth server.
 
@@ -207,21 +207,39 @@ Buyer marks completed   →  status = 'completed'
 (Either side can cancel  →  status = 'cancelled')
 ```
 
-### 5.5 Knowledge Network flow
+### 5.5 Knowledge Network flow (AI + Human)
+
+The Knowledge Network is built on a deliberate split of labour between AI and human experts. Neither replaces the other:
+
+- **AI layer** — instant answers for common, low-stakes questions where a language model is genuinely useful (definitions, generic best practices, translation of technical terms).
+- **Human layer** — expert farmers and agri-engineers you can tap-to-call for anything that needs local judgement (which pesticide *for your soil this week*, whether *this* leaf photo is early blight, how to price a *specific* harvest).
+
+The 5-question-per-day AI cap is intentional — it (a) keeps the app affordable for small farmers when a real LLM is wired in, and (b) keeps human experts employed for the questions where their local knowledge is irreplaceable.
 
 ```
 Open Knowledge tab (farmer or buyer)
     │
+    ▼
+[AI layer] — quick FAQs
     ├── Ask a question in the chat  (5 free per day, quota in localStorage)
     │        └── Prototype AI reply (mocked; ready to swap with real LLM)
-    │
     ├── Tap a sample chip           (pest control / water schedule / storage / …)
     │
+    ▼
+[AI + Human bridge] — a callout explains the split, then hands off to:
+    │
+    ▼
+[Human layer] — complex, local, judgement-heavy questions
     ├── Browse expert farmers       → one-tap-to-call
     ├── Browse agri-engineers       → one-tap-to-call
     │
-    └── Join premium waitlist ₹299/mo — unlimited questions + priority experts
+    └── Join premium waitlist ₹299/mo — unlimited AI + priority human experts
 ```
+
+**Where this shows up in the UI**
+
+- `src/components/KnowledgeNetwork.tsx` renders the AI chat, then a green "AI + Human, working together" callout (i18n keys `aiHumanTitle` / `aiHumanBody`), then the two expert lists.
+- Translations exist in all four languages (en/hi/te/ta) — see `src/lib/i18n.ts`.
 
 ---
 

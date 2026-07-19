@@ -17,6 +17,9 @@ import { KnowledgeNetwork } from '@/components/KnowledgeNetwork'
 import { SkeletonGrid, SkeletonRow } from '@/components/ui/Skeleton'
 import { useUrlTab } from '@/lib/hooks/useUrlTab'
 import { prefetchListings, prefetchOrders, prefetchContracts } from '@/lib/prefetch'
+import { useListings } from '@/lib/hooks/useListings'
+import { useOrders } from '@/lib/hooks/useOrders'
+import { PHONE_LENGTH, isValidPhone, sanitizePhone } from '@/lib/validation'
 
 type FarmerProfile = { name: string; phone: string }
 type FarmerTab = 'listings' | 'orders' | 'contracts' | 'insights' | 'knowledge'
@@ -155,13 +158,19 @@ function SignInForm({ onSignIn }: { onSignIn: (name: string, phone: string) => v
   const { t } = useLanguage()
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [phoneError, setPhoneError] = useState(false)
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (name.trim() && phone.trim()) {
-      onSignIn(name.trim(), phone.trim())
+    if (!isValidPhone(phone)) {
+      setPhoneError(true)
+      return
+    }
+    if (name.trim()) {
+      onSignIn(name.trim(), phone)
       setName('')
       setPhone('')
+      setPhoneError(false)
     }
   }
 
@@ -184,12 +193,27 @@ function SignInForm({ onSignIn }: { onSignIn: (name: string, phone: string) => v
           <label className="block text-sm font-medium text-gray-700 mb-1">{t('phoneNumber')}</label>
           <input
             type="tel"
+            inputMode="numeric"
+            autoComplete="tel"
             required
+            maxLength={PHONE_LENGTH}
+            pattern="\d{10}"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => {
+              setPhone(sanitizePhone(e.target.value))
+              if (phoneError) setPhoneError(false)
+            }}
             placeholder={t('phonePlaceholder')}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+            aria-invalid={phoneError}
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none ${
+              phoneError
+                ? 'border-red-400 focus:ring-red-500'
+                : 'border-gray-300 focus:ring-green-500'
+            }`}
           />
+          {phoneError && (
+            <p className="text-xs text-red-600 mt-1">{t('invalidPhone')}</p>
+          )}
         </div>
         <button
           type="submit"
@@ -204,27 +228,10 @@ function SignInForm({ onSignIn }: { onSignIn: (name: string, phone: string) => v
 
 function ListingsView({ profile }: { profile: FarmerProfile }) {
   const { t } = useLanguage()
-  const [listings, setListings] = useState<Listing[]>([])
-  const [loading, setLoading] = useState(true)
+  const { listings, loading, refetch: fetchListings } = useListings({ farmerPhone: profile.phone })
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Listing | null>(null)
   const [analyticsListing, setAnalyticsListing] = useState<Listing | null>(null)
-
-  const fetchListings = async () => {
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('listings')
-      .select('*')
-      .eq('farmer_phone', profile.phone)
-      .order('created_at', { ascending: false })
-    if (error) console.error(error)
-    setListings(data ?? [])
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    fetchListings()
-  }, [profile.phone])
 
   const handleDelete = async (id: number) => {
     if (!confirm(t('confirmDelete'))) return
@@ -337,25 +344,8 @@ function ListingsView({ profile }: { profile: FarmerProfile }) {
 
 function OrdersView({ profile }: { profile: FarmerProfile }) {
   const { t } = useLanguage()
-  const [orders, setOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
+  const { orders, loading, refetch: fetchOrders } = useOrders({ farmerPhone: profile.phone })
   const [counteringOrder, setCounteringOrder] = useState<Order | null>(null)
-
-  const fetchOrders = async () => {
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('farmer_phone', profile.phone)
-      .order('created_at', { ascending: false })
-    if (error) console.error(error)
-    setOrders(data ?? [])
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    fetchOrders()
-  }, [profile.phone])
 
   const updateStatus = async (id: number, newStatus: OrderStatus, confirmKey: 'confirmMarkCompleted' | 'confirmCancelOrder') => {
     if (!confirm(t(confirmKey))) return

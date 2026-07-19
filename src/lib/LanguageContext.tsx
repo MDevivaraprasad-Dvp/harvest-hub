@@ -92,7 +92,7 @@ export function LanguageSelector({ openUpward = false }: { openUpward?: boolean 
       {open && (
         <div
           role="listbox"
-          className={`absolute right-0 w-48 rounded-xl border border-gray-100 bg-white shadow-xl overflow-hidden z-50 max-h-72 overflow-y-auto ${
+          className={`absolute right-0 w-52 rounded-2xl bg-white border border-gray-200 shadow-2xl overflow-hidden z-50 max-h-72 overflow-y-auto p-1.5 ${
             openUpward
               ? 'bottom-full mb-2 animate-in fade-in slide-in-from-bottom-1'
               : 'top-full mt-2 animate-in fade-in slide-in-from-top-1'
@@ -101,6 +101,7 @@ export function LanguageSelector({ openUpward = false }: { openUpward?: boolean 
           {(Object.entries(LANGUAGES) as [LanguageCode, typeof LANGUAGES[LanguageCode]][]).map(
             ([code, meta]) => {
               const active = code === lang
+              const showEnglish = meta.native !== meta.name
               return (
                 <button
                   key={code}
@@ -111,15 +112,23 @@ export function LanguageSelector({ openUpward = false }: { openUpward?: boolean 
                     setLang(code)
                     setOpen(false)
                   }}
-                  className={`w-full flex items-center justify-between px-4 py-2.5 text-sm text-left transition-colors ${
-                    active ? 'bg-green-50 text-green-800 font-semibold' : 'text-gray-700 hover:bg-gray-50'
+                  className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
+                    active
+                      ? 'bg-green-600 hover:bg-green-600'
+                      : 'bg-white hover:bg-green-50'
                   }`}
                 >
-                  <div className="flex flex-col">
-                    <span>{meta.native}</span>
-                    <span className="text-xs text-gray-400 font-normal">{meta.name}</span>
-                  </div>
-                  {active && <Check className="w-4 h-4 text-green-600 shrink-0" />}
+                  <span className="flex flex-col min-w-0">
+                    <span className={`text-base font-bold truncate leading-tight ${active ? 'text-white' : 'text-green-900'}`}>
+                      {meta.native}
+                    </span>
+                    {showEnglish && (
+                      <span className={`text-xs font-medium truncate mt-0.5 ${active ? 'text-green-50' : 'text-gray-500'}`}>
+                        {meta.name}
+                      </span>
+                    )}
+                  </span>
+                  {active && <Check className="w-4 h-4 text-white shrink-0" strokeWidth={3} />}
                 </button>
               )
             }

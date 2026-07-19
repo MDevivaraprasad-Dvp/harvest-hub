@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useLanguage } from '@/lib/LanguageContext'
+import { PHONE_LENGTH, isValidPhone, sanitizePhone } from '@/lib/validation'
 
 export function SignInForm({
   onSignIn,
@@ -15,15 +16,27 @@ export function SignInForm({
   const { t } = useLanguage()
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [phoneError, setPhoneError] = useState(false)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (name.trim() && phone.trim()) {
-      onSignIn(name.trim(), phone.trim())
+    if (!isValidPhone(phone)) {
+      setPhoneError(true)
+      return
+    }
+    if (name.trim()) {
+      onSignIn(name.trim(), phone)
       setName('')
       setPhone('')
+      setPhoneError(false)
     }
   }
+
+  const phoneInputClass = `w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent outline-none font-medium ${
+    phoneError
+      ? 'border-red-400 focus:ring-red-500'
+      : 'border-gray-300 focus:ring-green-500'
+  }`
 
   return (
     <div>
@@ -44,12 +57,23 @@ export function SignInForm({
           <label className="block text-sm font-semibold text-gray-700 mb-1">{t('phoneNumber')}</label>
           <input
             type="tel"
+            inputMode="numeric"
+            autoComplete="tel"
             required
+            maxLength={PHONE_LENGTH}
+            pattern="\d{10}"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => {
+              setPhone(sanitizePhone(e.target.value))
+              if (phoneError) setPhoneError(false)
+            }}
             placeholder={t('phonePlaceholder')}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none font-medium"
+            aria-invalid={phoneError}
+            className={phoneInputClass}
           />
+          {phoneError && (
+            <p className="text-xs text-red-600 mt-1">{t('invalidPhone')}</p>
+          )}
         </div>
         <button
           type="submit"

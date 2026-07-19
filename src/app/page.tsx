@@ -141,7 +141,7 @@ export default function Home() {
               </span>
             </div>
             <SubNav />
-            <div className="[&_button]:!bg-white/15 [&_button]:!border-white/20 [&_button]:!text-white [&_svg]:!text-white">
+            <div className="[&>div>button]:!bg-white/15 [&>div>button]:!border-white/20 [&>div>button]:!text-white [&>div>button>svg]:!text-white">
               <LanguageSelector />
             </div>
           </div>

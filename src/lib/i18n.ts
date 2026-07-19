@@ -176,6 +176,7 @@ export const translations = {
     yourNamePlaceholder: 'e.g. Ramesh Kumar',
     phoneNumber: 'Phone Number',
     phonePlaceholder: 'e.g. 9876543210',
+    invalidPhone: 'Enter a valid 10-digit phone number',
     continue: 'Continue',
     hi: 'Hi',
     myListings: 'My Listings',
@@ -475,6 +476,8 @@ export const translations = {
     premiumFeature4: 'Voice questions in Hindi, Telugu, Tamil',
     knowledgePrototypeBadge: 'Prototype — full launch coming soon',
     mockAIReply: 'This is a preview of FarmEasy AI. In the full version, you would get a specific, sourced answer here. Try the sample questions to see the flow.',
+    aiHumanTitle: 'AI + Human, working together',
+    aiHumanBody: 'Quick FAQs go to AI. Complex, local questions go to the farmers and agri-engineers below. We limit AI on purpose — it keeps costs affordable for farmers, and it keeps human experts employed where their judgement matters.',
   },
 
   hi: {
@@ -630,6 +633,7 @@ export const translations = {
     yourNamePlaceholder: 'जैसे रमेश कुमार',
     phoneNumber: 'फ़ोन नंबर',
     phonePlaceholder: 'जैसे 9876543210',
+    invalidPhone: 'मान्य 10 अंकों का फ़ोन नंबर दर्ज करें',
     continue: 'जारी रखें',
     hi: 'नमस्ते',
     myListings: 'मेरी सूची',
@@ -915,6 +919,8 @@ export const translations = {
     premiumFeature4: 'हिंदी, तेलुगु, तमिल में आवाज़ से सवाल',
     knowledgePrototypeBadge: 'प्रोटोटाइप — पूर्ण लॉन्च जल्द',
     mockAIReply: 'यह फार्मईज़ी AI का पूर्वावलोकन है। पूर्ण संस्करण में आपको विशिष्ट, स्रोत-सहित उत्तर मिलेगा। प्रवाह देखने के लिए नमूना सवाल आज़माएं।',
+    aiHumanTitle: 'AI + इंसान, साथ मिलकर',
+    aiHumanBody: 'आसान सवाल AI संभालता है। जटिल, स्थानीय समस्याएँ नीचे दिए गए किसानों और कृषि इंजीनियरों तक जाती हैं। हम AI का उपयोग जानबूझ कर सीमित रखते हैं — इससे किसानों के लिए यह किफ़ायती रहता है और मानव विशेषज्ञों की नौकरियाँ भी बनी रहती हैं।',
   },
 
   te: {
@@ -1070,6 +1076,7 @@ export const translations = {
     yourNamePlaceholder: 'ఉదా: రమేష్ కుమార్',
     phoneNumber: 'ఫోన్ నంబర్',
     phonePlaceholder: 'ఉదా: 9876543210',
+    invalidPhone: '10 అంకెల చెల్లుబాటు అయ్యే ఫోన్ నంబర్ నమోదు చేయండి',
     continue: 'కొనసాగించు',
     hi: 'నమస్కారం',
     myListings: 'నా జాబితాలు',
@@ -1355,6 +1362,8 @@ export const translations = {
     premiumFeature4: 'హిందీ, తెలుగు, తమిళంలో వాయిస్ ప్రశ్నలు',
     knowledgePrototypeBadge: 'ప్రోటోటైప్ — పూర్తి లాంచ్ త్వరలో',
     mockAIReply: 'ఇది ఫార్మ్‌ఈజీ AI యొక్క ప్రివ్యూ. పూర్తి వెర్షన్‌లో మీకు నిర్దిష్ట, మూలాధార సమాధానం లభిస్తుంది. ప్రవాహాన్ని చూడటానికి నమూనా ప్రశ్నలను ప్రయత్నించండి.',
+    aiHumanTitle: 'AI + మనిషి, కలిసి పని',
+    aiHumanBody: 'సాధారణ ప్రశ్నలను AI చూసుకుంటుంది. క్లిష్టమైన, స్థానిక సమస్యలు క్రింద ఉన్న రైతులు మరియు వ్యవసాయ ఇంజనీర్‌లకు వెళ్తాయి. మేము AI వినియోగాన్ని ఉద్దేశపూర్వకంగా పరిమితం చేస్తాము — ఇది రైతులకు అందుబాటు ధరలో ఉంచుతుంది, మానవ నిపుణుల ఉద్యోగాలు కూడా భద్రంగా ఉంటాయి.',
   },
 
   ta: {
@@ -1510,6 +1519,7 @@ export const translations = {
     yourNamePlaceholder: 'எ.கா. ரமேஷ் குமார்',
     phoneNumber: 'தொலைபேசி எண்',
     phonePlaceholder: 'எ.கா. 9876543210',
+    invalidPhone: '10 இலக்க செல்லுபடியாகும் தொலைபேசி எண்ணை உள்ளிடவும்',
     continue: 'தொடர்க',
     hi: 'வணக்கம்',
     myListings: 'எனது பட்டியல்கள்',
@@ -1795,6 +1805,8 @@ export const translations = {
     premiumFeature4: 'இந்தி, தெலுங்கு, தமிழில் குரல் கேள்விகள்',
     knowledgePrototypeBadge: 'மாதிரி — முழு தொடக்கம் விரைவில்',
     mockAIReply: 'இது பார்ம்ஈஸி AI-இன் முன்னோட்டம். முழு பதிப்பில் உங்களுக்கு குறிப்பிட்ட, மூல-சான்று பதில் கிடைக்கும். ஓட்டத்தைப் பார்க்க மாதிரி கேள்விகளை முயற்சிக்கவும்.',
+    aiHumanTitle: 'AI + மனிதன், ஒன்றாக',
+    aiHumanBody: 'எளிய கேள்விகளை AI கையாள்கிறது. சிக்கலான, உள்ளூர் பிரச்சினைகள் கீழே உள்ள விவசாயிகள் மற்றும் வேளாண் பொறியாளர்களுக்கு செல்கின்றன. AI-ன் பயன்பாட்டை நாங்கள் வேண்டுமென்றே வரம்பிடுகிறோம் — இது விவசாயிகளுக்கு மலிவாக இருக்கும், மனித நிபுணர்களின் வேலைகளும் பாதுகாக்கப்படும்.',
   },
 } as const
 
