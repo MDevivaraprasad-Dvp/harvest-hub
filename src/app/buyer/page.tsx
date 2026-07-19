@@ -5,21 +5,38 @@ import Link from 'next/link'
 import {
   Sprout, ShoppingCart, MapPin, Search, Phone, Leaf,
   BarChart3, ArrowRight, Store, Heart, ClipboardList,
-  LogOut, X, User,
+  X, User, Handshake, Brain, Check,
 } from 'lucide-react'
 import { supabase, type Listing, type Review } from '@/lib/supabase'
-import { useLanguage, LanguageSelector } from '@/lib/LanguageContext'
+import { useLanguage } from '@/lib/LanguageContext'
 import { RatingSummary } from '@/components/StarRating'
 import { BuyerInsights } from '@/components/BuyerInsights'
 import { CustomSelect } from '@/components/CustomSelect'
 import { FavoriteHeart } from '@/components/FavoriteHeart'
 import { OrderForm } from '@/components/OrderForm'
 import { BuyerOrders } from '@/components/BuyerOrders'
+import { Sidebar, SidebarLayout, type SidebarItem } from '@/components/Sidebar'
+import { BuyerContracts } from '@/components/Contracts'
+import { KnowledgeNetwork } from '@/components/KnowledgeNetwork'
+import { StatusPill } from '@/components/StatusPill'
 import { readFavorites } from '@/lib/favorites'
+import { useProduceImage } from '@/lib/produceImage'
+import { categoriseProduce, CATEGORY_ORDER, type ProduceCategory } from '@/lib/produceCategory'
+
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
+
+const CATEGORY_LABEL_KEYS: Record<ProduceCategory, string> = {
+  vegetables: 'catVegetables',
+  fruits: 'catFruits',
+  grains: 'catGrains',
+  pulses: 'catPulses',
+  herbs: 'catHerbs',
+  other: 'catOther',
+}
 
 type FarmerStats = { average: number | null; count: number }
 type BuyerProfile = { name: string; phone: string }
-type Tab = 'marketplace' | 'saved' | 'orders' | 'insights'
+type Tab = 'marketplace' | 'saved' | 'orders' | 'contracts' | 'insights' | 'knowledge'
 
 const PAGE_SIZE = 12
 
@@ -93,120 +110,103 @@ export default function BuyerPage() {
     return map
   }, [reviews])
 
+  const items: (SidebarItem & { key: Tab })[] = [
+    { key: 'marketplace', label: t('tabMarketplace'), Icon: Store },
+    { key: 'saved', label: t('tabSaved'), Icon: Heart, badge: favorites.length },
+    { key: 'orders', label: t('tabMyOrders'), Icon: ClipboardList },
+    { key: 'contracts', label: t('contractFarming'), Icon: Handshake, isNew: true },
+    { key: 'insights', label: t('marketInsights'), Icon: BarChart3 },
+    { key: 'knowledge', label: t('knowledgeNavLink'), Icon: Brain, isNew: true },
+  ]
+
   return (
-    <div className="min-h-screen bg-green-50">
-      <header className="bg-white shadow-sm">
-        <div className="w-full px-6 lg:px-10 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-lg bg-green-600 flex items-center justify-center">
-              <Sprout className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-green-800">{t('appName')}</span>
-          </Link>
-          <div className="flex items-center gap-3">
-            {profile ? (
-              <span className="hidden sm:inline text-sm text-gray-600">
-                {t('hi')}, <span className="font-semibold text-green-800">{profile.name}</span>
-              </span>
-            ) : (
-              <span className="hidden sm:inline text-sm text-gray-600">{t('buyerMarketplace')}</span>
-            )}
-            <LanguageSelector />
-            {profile ? (
-              <button
-                onClick={handleSignOut}
-                className="text-sm text-red-600 hover:underline inline-flex items-center gap-1"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">{t('signOut')}</span>
-              </button>
-            ) : (
+    <>
+      <Sidebar
+        items={items}
+        active={tab}
+        onSelect={setTab}
+        subtitle={t('buyerMarketplace')}
+        userName={profile?.name}
+        onSignOut={profile ? handleSignOut : undefined}
+      />
+      <SidebarLayout>
+        <main className="max-w-[1400px] mx-auto px-6 py-8">
+          {!profile && tab === 'marketplace' && (
+            <div className="bg-linear-to-r from-green-600 to-green-700 text-white rounded-2xl shadow-lg p-6 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <ShoppingCart className="w-10 h-10 shrink-0" />
+                <div>
+                  <div className="text-xl font-bold">{t('welcomeBuyer')}</div>
+                  <p className="text-green-50 text-sm mt-1">{t('signInBuyerPrompt')}</p>
+                </div>
+              </div>
               <button
                 onClick={() => setShowSignIn(true)}
-                className="text-sm bg-green-600 hover:bg-green-700 text-white font-semibold px-3 py-1.5 rounded-lg inline-flex items-center gap-1"
+                className="bg-white text-green-700 hover:bg-green-50 font-semibold px-6 py-3 rounded-lg shadow whitespace-nowrap inline-flex items-center gap-2"
               >
                 <User className="w-4 h-4" />
-                <span>{t('signInAsBuyer')}</span>
+                <span>{t('signInToBuy')}</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
-            )}
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-[1400px] mx-auto px-6 py-8">
-        <div className="flex gap-2 mb-6 border-b border-gray-200 flex-wrap">
-          <TabButton active={tab === 'marketplace'} onClick={() => setTab('marketplace')} icon={<Store className="w-4 h-4" />} label={t('tabMarketplace')} />
-          <TabButton active={tab === 'saved'} onClick={() => setTab('saved')} icon={<Heart className="w-4 h-4" />} label={t('tabSaved')} badge={favorites.length > 0 ? favorites.length : undefined} />
-          <TabButton active={tab === 'orders'} onClick={() => setTab('orders')} icon={<ClipboardList className="w-4 h-4" />} label={t('tabMyOrders')} />
-          <TabButton active={tab === 'insights'} onClick={() => setTab('insights')} icon={<BarChart3 className="w-4 h-4" />} label={t('tabInsights')} />
-        </div>
-
-        {tab === 'insights' && (
-          <>
-            <div className="mb-6">
-              <h1 className="text-3xl font-bold text-green-900">{t('marketInsights')}</h1>
-              <p className="text-gray-600 mt-1">{t('buyerInsightsSubtitle')}</p>
             </div>
-            <BuyerInsights />
-          </>
-        )}
+          )}
 
-        {tab === 'orders' && (
-          <>
-            <div className="mb-6">
-              <h1 className="text-3xl font-bold text-green-900">{t('tabMyOrders')}</h1>
-              <p className="text-gray-600 mt-1">{t('myOrdersSubtitle')}</p>
-            </div>
-            <BuyerOrders />
-          </>
-        )}
-
-        {tab === 'marketplace' && (
-          <>
-            {!profile && (
-              <div className="bg-linear-to-r from-green-600 to-green-700 text-white rounded-2xl shadow-lg p-6 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <ShoppingCart className="w-10 h-10 shrink-0" />
-                  <div>
-                    <div className="text-xl font-bold">{t('welcomeBuyer')}</div>
-                    <p className="text-green-50 text-sm mt-1">{t('signInBuyerPrompt')}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowSignIn(true)}
-                  className="bg-white text-green-700 hover:bg-green-50 font-semibold px-6 py-3 rounded-lg shadow whitespace-nowrap inline-flex items-center gap-2"
-                >
-                  <span>{t('signInToBuy')}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+          {tab === 'insights' && (
+            <>
+              <div className="mb-6">
+                <h1 className="text-3xl sm:text-4xl font-extrabold text-green-900 tracking-tight">{t('marketInsights')}</h1>
+                <p className="text-gray-600 mt-1">{t('buyerInsightsSubtitle')}</p>
               </div>
-            )}
+              <BuyerInsights />
+            </>
+          )}
+
+          {tab === 'orders' && (
+            <>
+              <div className="mb-6">
+                <h1 className="text-3xl sm:text-4xl font-extrabold text-green-900 tracking-tight">{t('tabMyOrders')}</h1>
+                <p className="text-gray-600 mt-1">{t('myOrdersSubtitle')}</p>
+              </div>
+              <BuyerOrders />
+            </>
+          )}
+
+          {tab === 'contracts' && (
+            <BuyerContracts
+              profile={profile}
+              onSignInRequired={() => setShowSignIn(true)}
+            />
+          )}
+
+          {tab === 'knowledge' && <KnowledgeNetwork />}
+
+          {tab === 'marketplace' && (
             <MarketplaceView
               listings={listings}
               farmerStats={farmerStats}
               loading={loading}
               trackViews
             />
-          </>
-        )}
+          )}
 
-        {tab === 'saved' && (
-          <SavedView
-            listings={listings.filter((l) => favorites.includes(l.id))}
-            farmerStats={farmerStats}
-            loading={loading}
-            emptyMessage={t('noFavoritesYet')}
-          />
-        )}
+          {tab === 'saved' && (
+            <SavedView
+              listings={listings.filter((l) => favorites.includes(l.id))}
+              farmerStats={farmerStats}
+              loading={loading}
+              emptyMessage={t('noFavoritesYet')}
+            />
+          )}
+        </main>
+      </SidebarLayout>
 
-        {showSignIn && (
-          <BuyerSignInModal
-            onClose={() => setShowSignIn(false)}
-            onSignIn={handleSignIn}
-          />
-        )}
-      </main>
-    </div>
+      {showSignIn && (
+        <BuyerSignInModal
+          onClose={() => setShowSignIn(false)}
+          onSignIn={handleSignIn}
+        />
+      )}
+    </>
   )
 }
 
@@ -281,39 +281,6 @@ function BuyerSignInModal({
   )
 }
 
-function TabButton({
-  active,
-  onClick,
-  label,
-  icon,
-  badge,
-}: {
-  active: boolean
-  onClick: () => void
-  label: string
-  icon?: React.ReactNode
-  badge?: number
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`relative px-4 py-2.5 font-medium transition-colors inline-flex items-center gap-2 ${
-        active
-          ? 'text-green-800 border-b-2 border-green-600'
-          : 'text-gray-600 hover:text-green-700'
-      }`}
-    >
-      {icon}
-      <span>{label}</span>
-      {badge !== undefined && (
-        <span className="ml-1 inline-flex items-center justify-center min-w-[20px] px-1.5 py-0.5 text-xs font-semibold bg-green-600 text-white rounded-full">
-          {badge}
-        </span>
-      )}
-    </button>
-  )
-}
-
 function MarketplaceView({
   listings,
   farmerStats,
@@ -328,6 +295,7 @@ function MarketplaceView({
   const { t } = useLanguage()
   const [search, setSearch] = useState('')
   const [locationFilter, setLocationFilter] = useState('')
+  const [activeCategories, setActiveCategories] = useState<Set<ProduceCategory>>(new Set())
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const [orderingListing, setOrderingListing] = useState<Listing | null>(null)
@@ -338,17 +306,36 @@ function MarketplaceView({
     return Array.from(set).sort()
   }, [listings])
 
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<ProduceCategory, number>()
+    for (const l of listings) {
+      const c = categoriseProduce(l.produce_name)
+      counts.set(c, (counts.get(c) ?? 0) + 1)
+    }
+    return counts
+  }, [listings])
+
   const filtered = useMemo(() => {
     return listings.filter((l) => {
       const matchesSearch = search.trim() === '' || l.produce_name.toLowerCase().includes(search.toLowerCase())
       const matchesLocation = locationFilter === '' || l.location === locationFilter
-      return matchesSearch && matchesLocation
+      const matchesCategory = activeCategories.size === 0 || activeCategories.has(categoriseProduce(l.produce_name))
+      return matchesSearch && matchesLocation && matchesCategory
     })
-  }, [listings, search, locationFilter])
+  }, [listings, search, locationFilter, activeCategories])
+
+  const toggleCategory = (c: ProduceCategory) => {
+    setActiveCategories((prev) => {
+      const next = new Set(prev)
+      if (next.has(c)) next.delete(c)
+      else next.add(c)
+      return next
+    })
+  }
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE)
-  }, [search, locationFilter])
+  }, [search, locationFilter, activeCategories])
 
   useEffect(() => {
     if (visibleCount >= filtered.length) return
@@ -372,31 +359,73 @@ function MarketplaceView({
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-green-900">{t('freshFromFarm')}</h1>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-green-900 tracking-tight">{t('freshFromFarm')}</h1>
         <p className="text-gray-600 mt-1">{t('browseSubtitle')}</p>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm p-4 mb-6 flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-          <input
-            type="text"
-            placeholder={t('searchPlaceholder').replace('🔍 ', '')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-          />
+      <div className="bg-white rounded-2xl shadow-sm p-4 mb-6 space-y-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder={t('searchPlaceholder').replace('🔍 ', '')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none font-medium"
+            />
+          </div>
+          <div className="sm:w-64">
+            <CustomSelect
+              value={locationFilter}
+              onChange={setLocationFilter}
+              Icon={MapPin}
+              options={[
+                { value: '', label: t('allLocations') },
+                ...locations.map((loc) => ({ value: loc, label: loc })),
+              ]}
+            />
+          </div>
         </div>
-        <div className="sm:w-64">
-          <CustomSelect
-            value={locationFilter}
-            onChange={setLocationFilter}
-            Icon={MapPin}
-            options={[
-              { value: '', label: t('allLocations') },
-              ...locations.map((loc) => ({ value: loc, label: loc })),
-            ]}
-          />
+        <div className="flex items-center flex-wrap gap-2 pt-1">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mr-1">
+            {t('categoryFilter')}
+          </span>
+          {CATEGORY_ORDER.map((c) => {
+            const count = categoryCounts.get(c) ?? 0
+            if (count === 0) return null
+            const isActive = activeCategories.has(c)
+            return (
+              <button
+                key={c}
+                onClick={() => toggleCategory(c)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold tracking-tight transition-all border ${
+                  isActive
+                    ? 'bg-green-600 text-white border-green-600 shadow-sm'
+                    : 'bg-white text-green-800 border-green-200 hover:border-green-400 hover:bg-green-50'
+                }`}
+              >
+                <span className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center ${
+                  isActive ? 'bg-white border-white' : 'border-green-400'
+                }`}>
+                  {isActive && <Check className="w-2.5 h-2.5 text-green-700" strokeWidth={3.5} />}
+                </span>
+                <span>{t(CATEGORY_LABEL_KEYS[c] as never)}</span>
+                <span className={`text-[10px] tabular-nums ${isActive ? 'text-green-100' : 'text-gray-400'}`}>
+                  {count}
+                </span>
+              </button>
+            )
+          })}
+          {activeCategories.size > 0 && (
+            <button
+              onClick={() => setActiveCategories(new Set())}
+              className="text-xs font-bold text-gray-500 hover:text-red-600 inline-flex items-center gap-1 ml-1"
+            >
+              <X className="w-3 h-3" strokeWidth={2.5} />
+              {t('clearFilters')}
+            </button>
+          )}
         </div>
       </div>
 
@@ -467,7 +496,7 @@ function SavedView({
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-green-900">{t('tabSaved')}</h1>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-green-900 tracking-tight">{t('tabSaved')}</h1>
         <p className="text-gray-600 mt-1">{t('savedSubtitle')}</p>
       </div>
 
@@ -555,12 +584,27 @@ function ListingCard({
     return () => observer.disconnect()
   }, [trackViews, logView])
 
+  const isFresh = Date.now() - new Date(listing.created_at).getTime() < SEVEN_DAYS_MS
+  const isTrusted = farmerStats?.average != null && farmerStats.average >= 4.5 && farmerStats.count >= 2
+  const autoImage = useProduceImage(listing.produce_name, listing.image_url)
+  const [imgFailed, setImgFailed] = useState(false)
+  const imgSrc = imgFailed ? null : autoImage
+
   return (
     <div ref={cardRef} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow relative">
       <FavoriteHeart listingId={listing.id} className="absolute top-3 right-3 z-10 w-9 h-9 shadow-md" />
-      {listing.image_url ? (
+      <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 items-start">
+        {isFresh && <StatusPill label={t('badgeFresh')} variant="green" pulse size="sm" />}
+        {isTrusted && <StatusPill label={t('badgeTrustedFarmer')} variant="amber" size="sm" />}
+      </div>
+      {imgSrc ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={listing.image_url} alt={listing.produce_name} className="w-full h-48 object-cover" />
+        <img
+          src={imgSrc}
+          alt={listing.produce_name}
+          className="w-full h-48 object-cover"
+          onError={() => setImgFailed(true)}
+        />
       ) : (
         <div className="w-full h-48 bg-linear-to-br from-green-100 to-green-200 flex items-center justify-center">
           <Leaf className="w-14 h-14 text-green-600" />
@@ -568,25 +612,26 @@ function ListingCard({
       )}
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-bold text-lg text-green-900 truncate min-w-0 flex-1" title={listing.produce_name}>{listing.produce_name}</h3>
+          <h3 className="font-extrabold text-xl text-green-900 truncate min-w-0 flex-1 tracking-tight" title={listing.produce_name}>{listing.produce_name}</h3>
           <div className="text-right shrink-0">
-            <div className="text-xl font-bold text-green-700">₹{listing.price_per_kg}<span className="text-xs font-normal text-gray-500">/kg</span></div>
+            <div className="text-2xl font-extrabold text-green-700 tabular-nums leading-none">₹{listing.price_per_kg}<span className="text-xs font-semibold text-gray-500">/kg</span></div>
           </div>
         </div>
-        <p className="text-sm text-gray-600 mt-1 flex items-center gap-1 min-w-0">
-          <MapPin className="w-3.5 h-3.5 shrink-0" />
+        <p className="text-sm text-gray-600 mt-1.5 flex items-center gap-1 min-w-0 font-medium">
+          <MapPin className="w-3.5 h-3.5 shrink-0 text-green-600" />
           <span className="truncate" title={listing.location}>{listing.location}</span>
         </p>
-        <p className="text-sm text-gray-500 mt-1 inline-flex items-center gap-1">
-          <Sprout className="w-3.5 h-3.5" />
+        <p className="text-xs text-gray-500 mt-1 inline-flex items-center gap-1 font-semibold uppercase tracking-wide">
+          <Sprout className="w-3.5 h-3.5 text-green-500" />
           <span>{listing.quantity_kg} {t('kgAvailable')}</span>
         </p>
 
         <div className="mt-3 pt-3 border-t border-gray-100">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <p className="text-sm text-gray-700 truncate" title={listing.farmer_name}>
-                <span className="font-medium">{t('farmer')}:</span> {listing.farmer_name}
+              <p className="text-sm truncate" title={listing.farmer_name}>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{t('farmer')}</span>
+                <span className="block font-bold text-green-900 truncate">{listing.farmer_name}</span>
               </p>
               <div className="mt-0.5">
                 <RatingSummary average={farmerStats?.average ?? null} count={farmerStats?.count ?? 0} />
@@ -594,7 +639,7 @@ function ListingCard({
             </div>
             <Link
               href={`/farmer/${encodeURIComponent(listing.farmer_phone)}`}
-              className="text-xs text-green-700 hover:underline whitespace-nowrap inline-flex items-center gap-1 shrink-0"
+              className="text-xs font-bold text-green-700 hover:underline whitespace-nowrap inline-flex items-center gap-1 shrink-0"
             >
               <span>{t('viewProfile')}</span>
               <ArrowRight className="w-3 h-3" />
@@ -603,26 +648,26 @@ function ListingCard({
 
           <button
             onClick={onOrder}
-            className="mt-3 w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg transition-colors inline-flex items-center justify-center gap-2"
+            className="mt-3 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-lg transition-colors inline-flex items-center justify-center gap-2 tracking-tight"
           >
-            <ShoppingCart className="w-4 h-4" />
+            <ShoppingCart className="w-4 h-4" strokeWidth={2.5} />
             <span>{t('placeOrder')}</span>
           </button>
 
           {revealed ? (
             <a
               href={`tel:${listing.farmer_phone}`}
-              className="mt-2 flex w-full items-center justify-center gap-2 bg-white hover:bg-gray-50 text-green-700 border border-green-600 font-semibold py-2 rounded-lg transition-colors text-sm"
+              className="mt-2 flex w-full items-center justify-center gap-2 bg-white hover:bg-gray-50 text-green-700 border border-green-600 font-bold py-2 rounded-lg transition-colors text-sm"
             >
-              <Phone className="w-4 h-4" />
+              <Phone className="w-4 h-4" strokeWidth={2.5} />
               <span>{t('call')} {listing.farmer_phone}</span>
             </a>
           ) : (
             <button
               onClick={onReveal}
-              className="mt-2 w-full bg-white hover:bg-gray-50 text-green-700 border border-green-600 font-semibold py-2 rounded-lg transition-colors text-sm inline-flex items-center justify-center gap-2"
+              className="mt-2 w-full bg-white hover:bg-gray-50 text-green-700 border border-green-600 font-bold py-2 rounded-lg transition-colors text-sm inline-flex items-center justify-center gap-2"
             >
-              <Phone className="w-4 h-4" />
+              <Phone className="w-4 h-4" strokeWidth={2.5} />
               <span>{t('contactFarmer')}</span>
             </button>
           )}

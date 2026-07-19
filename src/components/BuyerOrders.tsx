@@ -181,7 +181,7 @@ export function BuyerOrders() {
 
       {active.length > 0 && (
         <section className="mb-8">
-          <h2 className="text-lg font-bold text-green-900 mb-3">
+          <h2 className="text-xl font-extrabold text-green-900 mb-3 tracking-tight">
             {t('pendingOrders')} · {active.length}
           </h2>
           <div className="space-y-3">
@@ -200,7 +200,7 @@ export function BuyerOrders() {
 
       {history.length > 0 && (
         <section>
-          <h2 className="text-lg font-bold text-green-900 mb-3">
+          <h2 className="text-xl font-extrabold text-green-900 mb-3 tracking-tight">
             {t('completedOrders')} & {t('cancelledOrders')} · {history.length}
           </h2>
           <div className="space-y-3">
@@ -263,25 +263,25 @@ function BuyerOrderCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex-1 min-w-[200px]">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold text-green-900">{order.produce_name}</h3>
-            <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${statusBadge.cls}`}>
-              <StatusIcon className="w-3 h-3" />
+            <h3 className="font-extrabold text-lg text-green-900 tracking-tight">{order.produce_name}</h3>
+            <span className={`inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${statusBadge.cls}`}>
+              <StatusIcon className="w-3 h-3" strokeWidth={2.5} />
               {statusBadge.label}
             </span>
           </div>
-          <p className="text-sm text-gray-700 mt-1">
-            {order.quantity_kg} kg × ₹{order.price_per_kg}/kg =
-            <span className="font-bold text-green-700"> ₹{total.toFixed(2)}</span>
+          <p className="text-sm text-gray-700 mt-1 font-medium">
+            <span className="tabular-nums">{order.quantity_kg}</span> kg × <span className="tabular-nums">₹{order.price_per_kg}</span>/kg =
+            <span className="font-extrabold text-green-700 text-base tabular-nums"> ₹{total.toFixed(2)}</span>
           </p>
-          <p className="text-sm text-gray-600 mt-2">
-            <span className="font-medium">{t('orderFrom')}:</span>{' '}
+          <div className="mt-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{t('orderFrom')}</span>
             <Link
               href={`/farmer/${encodeURIComponent(order.farmer_phone)}`}
-              className="text-green-700 hover:underline"
+              className="ml-1.5 font-bold text-green-700 hover:underline"
             >
               {order.farmer_phone}
             </Link>
-          </p>
+          </div>
           {order.note && (
             <p className="text-sm text-gray-600 mt-1 italic">&ldquo;{order.note}&rdquo;</p>
           )}

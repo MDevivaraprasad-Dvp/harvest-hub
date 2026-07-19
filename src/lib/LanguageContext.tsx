@@ -46,7 +46,7 @@ export function useLanguage() {
   return ctx
 }
 
-export function LanguageSelector() {
+export function LanguageSelector({ openUpward = false }: { openUpward?: boolean } = {}) {
   const { lang, setLang } = useLanguage()
   const [open, setOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -83,14 +83,20 @@ export function LanguageSelector() {
         <Globe className="w-4 h-4 text-green-700" />
         <span>{current.native}</span>
         <ChevronDown
-          className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 text-gray-400 transition-transform ${
+            openUpward ? (open ? '' : 'rotate-180') : (open ? 'rotate-180' : '')
+          }`}
         />
       </button>
 
       {open && (
         <div
           role="listbox"
-          className="absolute right-0 top-full mt-2 w-48 rounded-xl border border-gray-100 bg-white shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-1"
+          className={`absolute right-0 w-48 rounded-xl border border-gray-100 bg-white shadow-xl overflow-hidden z-50 max-h-72 overflow-y-auto ${
+            openUpward
+              ? 'bottom-full mb-2 animate-in fade-in slide-in-from-bottom-1'
+              : 'top-full mt-2 animate-in fade-in slide-in-from-top-1'
+          }`}
         >
           {(Object.entries(LANGUAGES) as [LanguageCode, typeof LANGUAGES[LanguageCode]][]).map(
             ([code, meta]) => {

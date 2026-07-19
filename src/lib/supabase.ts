@@ -55,3 +55,31 @@ export type ListingView = {
   listing_id: number
   viewer_phone: string | null
 }
+
+export type ContractStatus =
+  | 'open'
+  | 'accepted'
+  | 'harvested'
+  | 'completed'
+  | 'cancelled'
+
+export type Contract = {
+  id: number
+  created_at: string
+  buyer_business_name: string
+  buyer_name: string
+  buyer_phone: string
+  produce_name: string
+  quantity_kg: number
+  price_per_kg: number
+  funding_amount: number
+  deadline: string
+  location: string | null
+  notes: string | null
+  status: ContractStatus
+  farmer_name: string | null
+  farmer_phone: string | null
+  accepted_at: string | null
+  harvested_at: string | null
+  completed_at: string | null
+}

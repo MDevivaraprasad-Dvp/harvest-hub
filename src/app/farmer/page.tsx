@@ -4,27 +4,46 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   Sprout, Tractor, Camera, MapPin, Plus, Pencil, Trash2,
-  Phone, Package, ArrowRight, X, Check, LogOut, RefreshCw,
-  BarChart3, Handshake,
+  Phone, Package, ArrowRight, X, Check, RefreshCw,
+  BarChart3, Handshake, LayoutDashboard, User, Brain, ClipboardList,
 } from 'lucide-react'
 import { supabase, type Listing, type Order, type OrderStatus } from '@/lib/supabase'
-import { useLanguage, LanguageSelector } from '@/lib/LanguageContext'
+import { useLanguage } from '@/lib/LanguageContext'
 import { MarketInsights } from '@/components/MarketInsights'
 import { ListingAnalytics } from '@/components/ListingAnalytics'
+import { Sidebar, SidebarLayout, type SidebarItem } from '@/components/Sidebar'
+import { FarmerContracts } from '@/components/Contracts'
+import { KnowledgeNetwork } from '@/components/KnowledgeNetwork'
 
 type FarmerProfile = { name: string; phone: string }
+type FarmerTab = 'listings' | 'orders' | 'contracts' | 'insights' | 'knowledge'
 
 export default function FarmerPage() {
   const { t } = useLanguage()
   const [profile, setProfile] = useState<FarmerProfile | null>(null)
   const [showSignIn, setShowSignIn] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState<FarmerTab>('listings')
+  const [pendingCount, setPendingCount] = useState(0)
 
   useEffect(() => {
     const stored = localStorage.getItem('farmeasy_farmer')
     if (stored) setProfile(JSON.parse(stored))
     setLoading(false)
   }, [])
+
+  useEffect(() => {
+    if (!profile) return
+    const loadPending = async () => {
+      const { count } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('farmer_phone', profile.phone)
+        .in('status', ['pending', 'negotiating'])
+      setPendingCount(count ?? 0)
+    }
+    loadPending()
+  }, [profile, tab])
 
   const handleSignIn = (name: string, phone: string) => {
     const p = { name, phone }
@@ -36,91 +55,94 @@ export default function FarmerPage() {
   const handleSignOut = () => {
     localStorage.removeItem('farmeasy_farmer')
     setProfile(null)
+    setTab('listings')
   }
 
   if (loading) return null
 
+  const items: (SidebarItem & { key: FarmerTab })[] = [
+    { key: 'listings', label: t('myListings'), Icon: LayoutDashboard },
+    { key: 'orders', label: t('orders'), Icon: ClipboardList, badge: pendingCount },
+    { key: 'contracts', label: t('contractFarming'), Icon: Handshake, isNew: true },
+    { key: 'insights', label: t('marketInsights'), Icon: BarChart3 },
+    { key: 'knowledge', label: t('knowledgeNavLink'), Icon: Brain, isNew: true },
+  ]
+
   return (
-    <div className="min-h-screen bg-green-50">
-      <header className="bg-white shadow-sm">
-        <div className="w-full px-6 lg:px-10 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-lg bg-green-600 flex items-center justify-center">
-              <Sprout className="w-5 h-5 text-white" />
+    <>
+      <Sidebar
+        items={items}
+        active={tab}
+        onSelect={setTab}
+        subtitle={t('welcomeFarmer')}
+        userName={profile?.name}
+        onSignOut={profile ? handleSignOut : undefined}
+      />
+      <SidebarLayout>
+        <main className="max-w-[1400px] mx-auto px-6 py-8">
+          {tab === 'listings' && (
+            profile ? <ListingsView profile={profile} /> : <SignInGate onSignIn={() => setShowSignIn(true)} />
+          )}
+          {tab === 'orders' && (
+            profile ? <OrdersView profile={profile} /> : <SignInGate onSignIn={() => setShowSignIn(true)} />
+          )}
+          {tab === 'contracts' && (
+            <FarmerContracts profile={profile} onSignInRequired={() => setShowSignIn(true)} />
+          )}
+          {tab === 'insights' && (
+            <div>
+              <div className="mb-6">
+                <h1 className="text-3xl sm:text-4xl font-extrabold text-green-900 tracking-tight">{t('marketInsights')}</h1>
+                <p className="text-gray-600 mt-1">{t('insightsSubtitle')}</p>
+              </div>
+              <MarketInsights />
             </div>
-            <span className="text-xl font-bold text-green-800">{t('appName')}</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            {profile && (
-              <span className="text-sm text-gray-600 hidden sm:inline">
-                {t('hi')}, <span className="font-semibold text-green-800">{profile.name}</span>
-              </span>
-            )}
-            <LanguageSelector />
-            {profile && (
-              <button
-                onClick={handleSignOut}
-                className="text-sm text-red-600 hover:underline inline-flex items-center gap-1"
-              >
-                <LogOut className="w-4 h-4" />
-                {t('signOut')}
-              </button>
-            )}
+          )}
+          {tab === 'knowledge' && <KnowledgeNetwork />}
+        </main>
+      </SidebarLayout>
+
+      {showSignIn && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-green-900">{t('welcomeFarmer')}</h2>
+                <button
+                  onClick={() => setShowSignIn(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <SignInForm onSignIn={handleSignIn} />
+            </div>
           </div>
         </div>
-      </header>
+      )}
+    </>
+  )
+}
 
-      <main className="max-w-[1400px] mx-auto px-6 py-8">
-        {profile ? (
-          <Dashboard profile={profile} />
-        ) : (
-          <>
-            <div className="mb-6">
-              <h1 className="text-3xl font-bold text-green-900">{t('marketInsights')}</h1>
-              <p className="text-gray-600 mt-1">{t('insightsSubtitle')}</p>
-            </div>
-
-            <div className="bg-linear-to-r from-green-600 to-green-700 text-white rounded-2xl shadow-lg p-6 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <Tractor className="w-10 h-10 shrink-0" />
-                <div>
-                  <div className="text-xl font-bold">{t('welcomeFarmer')}</div>
-                  <p className="text-green-50 text-sm mt-1">{t('signInPrompt')}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowSignIn(true)}
-                className="bg-white text-green-700 hover:bg-green-50 font-semibold px-6 py-3 rounded-lg shadow whitespace-nowrap inline-flex items-center gap-2"
-              >
-                <span>{t('signInToSell')}</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            <MarketInsights />
-
-            {showSignIn && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
-                  <div className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-xl font-bold text-green-900">{t('welcomeFarmer')}</h2>
-                      <button
-                        onClick={() => setShowSignIn(false)}
-                        className="text-gray-400 hover:text-gray-600"
-                        aria-label="Close"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </div>
-                    <SignInForm onSignIn={handleSignIn} />
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </main>
+function SignInGate({ onSignIn }: { onSignIn: () => void }) {
+  const { t } = useLanguage()
+  return (
+    <div className="bg-linear-to-r from-green-600 to-green-700 text-white rounded-2xl shadow-lg p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex items-center gap-3">
+        <Tractor className="w-12 h-12 shrink-0" />
+        <div>
+          <div className="text-2xl font-bold">{t('welcomeFarmer')}</div>
+          <p className="text-green-50 text-sm mt-1">{t('signInPrompt')}</p>
+        </div>
+      </div>
+      <button
+        onClick={onSignIn}
+        className="bg-white text-green-700 hover:bg-green-50 font-semibold px-6 py-3 rounded-lg shadow whitespace-nowrap inline-flex items-center gap-2"
+      >
+        <span>{t('signInToSell')}</span>
+        <ArrowRight className="w-4 h-4" />
+      </button>
     </div>
   )
 }
@@ -176,81 +198,6 @@ function SignInForm({ onSignIn }: { onSignIn: (name: string, phone: string) => v
   )
 }
 
-function Dashboard({ profile }: { profile: FarmerProfile }) {
-  const { t } = useLanguage()
-  const [tab, setTab] = useState<'listings' | 'orders' | 'insights'>('listings')
-  const [pendingCount, setPendingCount] = useState(0)
-
-  useEffect(() => {
-    const loadPendingCount = async () => {
-      const { count } = await supabase
-        .from('orders')
-        .select('*', { count: 'exact', head: true })
-        .eq('farmer_phone', profile.phone)
-        .in('status', ['pending', 'negotiating'])
-      setPendingCount(count ?? 0)
-    }
-    loadPendingCount()
-  }, [profile.phone, tab])
-
-  return (
-    <div>
-      <div className="flex gap-2 mb-6 border-b border-gray-200 flex-wrap">
-        <TabButton active={tab === 'listings'} onClick={() => setTab('listings')} label={t('myListingsTab')} />
-        <TabButton
-          active={tab === 'orders'}
-          onClick={() => setTab('orders')}
-          label={t('orders')}
-          badge={pendingCount > 0 ? pendingCount : undefined}
-        />
-        <TabButton active={tab === 'insights'} onClick={() => setTab('insights')} label={t('tabInsights')} />
-      </div>
-
-      {tab === 'listings' && <ListingsView profile={profile} />}
-      {tab === 'orders' && <OrdersView profile={profile} />}
-      {tab === 'insights' && (
-        <div>
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-green-900">{t('marketInsights')}</h1>
-            <p className="text-gray-600 mt-1">{t('insightsSubtitle')}</p>
-          </div>
-          <MarketInsights />
-        </div>
-      )}
-    </div>
-  )
-}
-
-function TabButton({
-  active,
-  onClick,
-  label,
-  badge,
-}: {
-  active: boolean
-  onClick: () => void
-  label: string
-  badge?: number
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`relative px-4 py-2.5 font-medium transition-colors ${
-        active
-          ? 'text-green-800 border-b-2 border-green-600'
-          : 'text-gray-600 hover:text-green-700'
-      }`}
-    >
-      {label}
-      {badge !== undefined && (
-        <span className="ml-2 inline-flex items-center justify-center min-w-[20px] px-1.5 py-0.5 text-xs font-semibold bg-red-500 text-white rounded-full">
-          {badge}
-        </span>
-      )}
-    </button>
-  )
-}
-
 function ListingsView({ profile }: { profile: FarmerProfile }) {
   const { t } = useLanguage()
   const [listings, setListings] = useState<Listing[]>([])
@@ -284,20 +231,29 @@ function ListingsView({ profile }: { profile: FarmerProfile }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-green-900">{t('myListings')}</h1>
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-green-900 tracking-tight">{t('myListings')}</h1>
           <p className="text-gray-600 mt-1">
             {listings.length} {listings.length === 1 ? t('activeListings') : t('activeListingsPlural')}
           </p>
         </div>
-        <button
-          onClick={() => { setEditing(null); setShowForm(true) }}
-          className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg shadow transition-colors inline-flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          <span>{t('addProduce').replace('+ ', '')}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/farmer/${encodeURIComponent(profile.phone)}`}
+            className="bg-white border border-green-600 text-green-700 hover:bg-green-50 font-semibold px-4 py-3 rounded-lg inline-flex items-center gap-2"
+          >
+            <User className="w-4 h-4" />
+            <span>{t('viewProfile')}</span>
+          </Link>
+          <button
+            onClick={() => { setEditing(null); setShowForm(true) }}
+            className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-lg shadow transition-colors inline-flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            <span>{t('addProduce').replace('+ ', '')}</span>
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -325,15 +281,15 @@ function ListingsView({ profile }: { profile: FarmerProfile }) {
                 <img src={l.image_url} alt={l.produce_name} className="w-full h-40 object-cover" />
               )}
               <div className="p-4">
-                <h3 className="font-semibold text-lg text-green-900">{l.produce_name}</h3>
-                <p className="text-sm text-gray-600 mt-1 inline-flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5" />
-                  <span>{l.location}</span>
+                <h3 className="font-extrabold text-lg text-green-900 tracking-tight truncate" title={l.produce_name}>{l.produce_name}</h3>
+                <p className="text-sm text-gray-600 mt-1 inline-flex items-center gap-1 font-medium">
+                  <MapPin className="w-3.5 h-3.5 text-green-600" />
+                  <span className="truncate">{l.location}</span>
                 </p>
                 <div className="mt-3 flex items-center justify-between">
                   <div>
-                    <div className="text-2xl font-bold text-green-700">₹{l.price_per_kg}<span className="text-sm font-normal text-gray-500">/kg</span></div>
-                    <div className="text-xs text-gray-500">{l.quantity_kg} {t('kgAvailable')}</div>
+                    <div className="text-2xl font-extrabold text-green-700 tabular-nums leading-none">₹{l.price_per_kg}<span className="text-sm font-semibold text-gray-500">/kg</span></div>
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mt-1">{l.quantity_kg} {t('kgAvailable')}</div>
                   </div>
                 </div>
                 <div className="mt-4 flex gap-2">
@@ -448,7 +404,7 @@ function OrdersView({ profile }: { profile: FarmerProfile }) {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-green-900">{t('orders')}</h1>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-green-900 tracking-tight">{t('orders')}</h1>
       </div>
 
       {loading ? (
@@ -619,7 +575,9 @@ function OrderGroup({
   const { t } = useLanguage()
   return (
     <div>
-      <h2 className="text-lg font-bold text-green-900 mb-3">{title} ({orders.length})</h2>
+      <h2 className="text-xl font-extrabold text-green-900 mb-3 tracking-tight">
+        {title} <span className="text-gray-400 font-bold">({orders.length})</span>
+      </h2>
       <div className="space-y-3">
         {orders.map((o) => {
           const total = o.quantity_kg * o.price_per_kg
@@ -637,22 +595,24 @@ function OrderGroup({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex-1 min-w-[200px]">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold text-green-900">{o.produce_name}</h3>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${meta.cls}`}>
+                    <h3 className="font-extrabold text-lg text-green-900 tracking-tight">{o.produce_name}</h3>
+                    <span className={`text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${meta.cls}`}>
                       {meta.label}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-700 mt-1">
-                    {o.quantity_kg} kg × ₹{o.price_per_kg}/kg =
-                    <span className="font-bold text-green-700"> ₹{total.toFixed(2)}</span>
+                  <p className="text-sm text-gray-700 mt-1 font-medium">
+                    <span className="tabular-nums">{o.quantity_kg}</span> kg × <span className="tabular-nums">₹{o.price_per_kg}</span>/kg =
+                    <span className="font-extrabold text-green-700 text-base tabular-nums"> ₹{total.toFixed(2)}</span>
                   </p>
-                  <p className="text-sm text-gray-600 mt-2">
-                    <span className="font-medium">{t('buyer')}:</span> {o.buyer_name}
-                    {' · '}
-                    <a href={`tel:${o.buyer_phone}`} className="text-green-700 hover:underline inline-flex items-center gap-1">
-                      <Phone className="w-3 h-3" /> {o.buyer_phone}
+                  <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{t('buyer')}</span>
+                      <span className="ml-1.5 font-bold text-green-900">{o.buyer_name}</span>
+                    </div>
+                    <a href={`tel:${o.buyer_phone}`} className="text-sm font-bold text-green-700 hover:underline inline-flex items-center gap-1">
+                      <Phone className="w-3.5 h-3.5" strokeWidth={2.5} /> {o.buyer_phone}
                     </a>
-                  </p>
+                  </div>
                   {o.note && (
                     <p className="text-sm text-gray-600 mt-1 italic">&ldquo;{o.note}&rdquo;</p>
                   )}
