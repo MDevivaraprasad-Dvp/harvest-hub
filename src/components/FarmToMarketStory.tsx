@@ -42,6 +42,16 @@ export function FarmToMarketStory() {
           {/* Sky */}
           <rect width="900" height="380" fill="url(#skyGradFTM)" />
 
+          {/* Rainbow arc — sits between the barn and the marketplace */}
+          <g opacity="0.35">
+            <path d="M 380 250 A 95 95 0 0 1 570 250" fill="none" stroke="#f87171" strokeWidth="3.5" />
+            <path d="M 384 250 A 91 91 0 0 1 566 250" fill="none" stroke="#fb923c" strokeWidth="3.5" />
+            <path d="M 388 250 A 87 87 0 0 1 562 250" fill="none" stroke="#facc15" strokeWidth="3.5" />
+            <path d="M 392 250 A 83 83 0 0 1 558 250" fill="none" stroke="#4ade80" strokeWidth="3.5" />
+            <path d="M 396 250 A 79 79 0 0 1 554 250" fill="none" stroke="#60a5fa" strokeWidth="3.5" />
+            <path d="M 400 250 A 75 75 0 0 1 550 250" fill="none" stroke="#a78bfa" strokeWidth="3.5" />
+          </g>
+
           {/* Sun with rotating rays */}
           <g transform="translate(90 78)">
             <g>
@@ -115,6 +125,21 @@ export function FarmToMarketStory() {
             <circle cx="0" cy="0" r="2.5" fill="#6b7280" />
           </g>
 
+          {/* Second windmill peeking behind the home */}
+          <g transform="translate(250 155)">
+            {/* Tower */}
+            <path d="M-4 55 L -7 0 L 7 0 L 4 55 Z" fill="#f9fafb" stroke="#9ca3af" strokeWidth="1" />
+            {/* Rotating blades */}
+            <g>
+              <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="6s" repeatCount="indefinite" />
+              <rect x="-2" y="-26" width="4" height="26" fill="#ffffff" stroke="#9ca3af" strokeWidth="0.6" />
+              <rect x="0" y="-2" width="26" height="4" fill="#ffffff" stroke="#9ca3af" strokeWidth="0.6" />
+              <rect x="-2" y="0" width="4" height="26" fill="#ffffff" stroke="#9ca3af" strokeWidth="0.6" />
+              <rect x="-26" y="-2" width="26" height="4" fill="#ffffff" stroke="#9ca3af" strokeWidth="0.6" />
+            </g>
+            <circle cx="0" cy="0" r="3" fill="#6b7280" />
+          </g>
+
           {/* Barn in mid-background */}
           <g transform="translate(200 200)">
             {/* Body */}
@@ -128,6 +153,37 @@ export function FarmToMarketStory() {
             <rect x="-6" y="4" width="12" height="10" fill="#fef3c7" stroke="#7f1d1d" strokeWidth="0.8" />
             <line x1="0" y1="4" x2="0" y2="14" stroke="#7f1d1d" strokeWidth="0.5" />
             <line x1="-6" y1="9" x2="6" y2="9" stroke="#7f1d1d" strokeWidth="0.5" />
+          </g>
+
+          {/* Rooster + weather vane on barn roof */}
+          <g transform="translate(200 178)">
+            {/* Vane pole */}
+            <line x1="0" y1="0" x2="0" y2="-16" stroke="#78350f" strokeWidth="1.2" />
+            {/* Compass cross */}
+            <line x1="-4" y1="-12" x2="4" y2="-12" stroke="#78350f" strokeWidth="0.8" />
+            <text x="0" y="-13.5" textAnchor="middle" fontSize="2.5" fill="#78350f" fontFamily="Arial, sans-serif" fontWeight="700">N</text>
+            {/* Rooster silhouette (with tiny head bob) */}
+            <g transform="translate(0 -16)">
+              <g>
+                <animateTransform attributeName="transform" type="translate" values="0 0; 0.4 -0.3; 0 0" dur="1.5s" repeatCount="indefinite" />
+                {/* Body */}
+                <ellipse cx="-1" cy="0" rx="4" ry="2.8" fill="#1f2937" />
+                {/* Head */}
+                <circle cx="2.5" cy="-2" r="1.9" fill="#1f2937" />
+                {/* Comb */}
+                <path d="M 1.5 -4 L 2 -5 L 3 -4 L 3 -5 L 4 -4 Z" fill="#dc2626" />
+                {/* Beak */}
+                <path d="M 4.5 -2 L 6 -1.5 L 4.5 -1 Z" fill="#f97316" />
+                {/* Wattle */}
+                <path d="M 3 -1 L 4 0.5 L 2.5 0 Z" fill="#dc2626" />
+                {/* Eye */}
+                <circle cx="3" cy="-2.3" r="0.35" fill="white" />
+                {/* Tail feathers */}
+                <path d="M -4 -1 Q -7 -5 -6 -2 Q -8 -2 -5 0 Z" fill="#1f2937" />
+                {/* Leg */}
+                <line x1="-1" y1="2.8" x2="-1" y2="4" stroke="#f97316" strokeWidth="0.7" />
+              </g>
+            </g>
           </g>
 
           {/* Front hill */}
@@ -298,6 +354,48 @@ export function FarmToMarketStory() {
                 </g>
               </g>
             ))}
+          </g>
+
+          {/* Wooden signpost pointing to FarmEasy market */}
+          <g transform="translate(430 328)">
+            {/* Pole */}
+            <rect x="-1.5" y="0" width="3" height="17" fill="#78350f" rx="0.4" />
+            <rect x="-1.5" y="14" width="3" height="3" fill="#5c2609" />
+            {/* Arrow sign pointing right — shape itself is the arrow */}
+            <path d="M -22 -13 L 12 -13 L 20 -6 L 12 1 L -22 1 Z" fill="#b45309" stroke="#78350f" strokeWidth="1" />
+            <path d="M -22 -13 L -22 1" stroke="#78350f" strokeWidth="1.2" />
+            <text x="-5" y="-4" textAnchor="middle" fontSize="6" fontWeight="700" fill="white" fontFamily="Arial, sans-serif">FarmEasy</text>
+          </g>
+
+          {/* Small pond in the meadow */}
+          <g transform="translate(490 358)">
+            <ellipse cx="0" cy="1" rx="26" ry="7" fill="#075985" opacity="0.75" />
+            <ellipse cx="0" cy="0" rx="24" ry="6" fill="#0284c7" />
+            <ellipse cx="0" cy="-1" rx="20" ry="4.5" fill="#0ea5e9" />
+            <ellipse cx="0" cy="-2" rx="14" ry="3" fill="#38bdf8" opacity="0.75" />
+            {/* Reflection highlights */}
+            <ellipse cx="-8" cy="-2" rx="5" ry="0.8" fill="white" opacity="0.6">
+              <animate attributeName="opacity" values="0.6;0.2;0.6" dur="2s" repeatCount="indefinite" />
+            </ellipse>
+            <ellipse cx="8" cy="0" rx="4" ry="0.7" fill="white" opacity="0.5">
+              <animate attributeName="opacity" values="0.5;0.15;0.5" dur="2.5s" begin="0.3s" repeatCount="indefinite" />
+            </ellipse>
+            {/* Floating duck */}
+            <g>
+              <animateTransform attributeName="transform" type="translate" values="-6 -2; 6 -2; -6 -2" dur="10s" repeatCount="indefinite" />
+              <ellipse cx="0" cy="0" rx="4" ry="2.2" fill="#fef3c7" stroke="#d97706" strokeWidth="0.4" />
+              <circle cx="-3.5" cy="-2" r="1.8" fill="#fef3c7" stroke="#d97706" strokeWidth="0.3" />
+              <path d="M-5.5 -2 L -7 -1.5 L -5.5 -1 Z" fill="#f97316" />
+              <circle cx="-4" cy="-2.5" r="0.3" fill="#292524" />
+              <path d="M3 0 Q 5 -1 5 1" stroke="#d97706" strokeWidth="0.6" fill="none" />
+            </g>
+            {/* Cattails on the left edge */}
+            <g transform="translate(-24 -2)">
+              <line x1="0" y1="0" x2="0" y2="-10" stroke="#166534" strokeWidth="1" />
+              <ellipse cx="0" cy="-11" rx="1.2" ry="3" fill="#78350f" />
+              <line x1="3" y1="0" x2="3" y2="-8" stroke="#166534" strokeWidth="1" />
+              <ellipse cx="3" cy="-9" rx="1" ry="2.5" fill="#78350f" />
+            </g>
           </g>
 
           {/* Second tomato plant */}
@@ -504,6 +602,64 @@ export function FarmToMarketStory() {
               </g>
             </g>
           ))}
+
+          {/* Butterfly floating over crops (no auto-rotate — it looks natural staying upright) */}
+          <g>
+            <animateMotion dur="14s" repeatCount="indefinite" path="M 260 315 C 310 295 380 300 400 320 C 380 345 300 340 240 325 C 210 315 240 305 260 315 Z" />
+            {/* Body (horizontal, head to the right) */}
+            <ellipse cx="0" cy="0" rx="2.2" ry="0.5" fill="#1f2937" />
+            {/* Upper wings */}
+            <ellipse cx="-1" cy="-2.6" rx="2.2" ry="2.6" fill="#c084fc">
+              <animate attributeName="ry" values="2.6;1;2.6" dur="0.25s" repeatCount="indefinite" />
+            </ellipse>
+            <ellipse cx="-1" cy="2.6" rx="2.2" ry="2.6" fill="#c084fc">
+              <animate attributeName="ry" values="2.6;1;2.6" dur="0.25s" repeatCount="indefinite" />
+            </ellipse>
+            {/* Lower wings */}
+            <ellipse cx="1.5" cy="-2" rx="1.7" ry="2" fill="#f472b6">
+              <animate attributeName="ry" values="2;0.7;2" dur="0.25s" repeatCount="indefinite" />
+            </ellipse>
+            <ellipse cx="1.5" cy="2" rx="1.7" ry="2" fill="#f472b6">
+              <animate attributeName="ry" values="2;0.7;2" dur="0.25s" repeatCount="indefinite" />
+            </ellipse>
+            {/* Antennae */}
+            <path d="M -2 -0.4 Q -3.2 -1 -3.8 -1.6" stroke="#1f2937" strokeWidth="0.35" fill="none" strokeLinecap="round" />
+            <path d="M -2 0.4 Q -3.2 1 -3.8 1.6" stroke="#1f2937" strokeWidth="0.35" fill="none" strokeLinecap="round" />
+          </g>
+
+          {/* Bee buzzing near pond */}
+          <g>
+            <animateMotion dur="7s" repeatCount="indefinite" path="M 475 348 C 500 335 520 345 515 358 C 505 370 475 365 465 355 C 460 350 468 345 475 348 Z" />
+            {/* Wings (above body) */}
+            <ellipse cx="-0.5" cy="-1.7" rx="1.6" ry="1.1" fill="white" opacity="0.75">
+              <animate attributeName="ry" values="1.1;0.4;1.1" dur="0.12s" repeatCount="indefinite" />
+            </ellipse>
+            <ellipse cx="0.8" cy="-1.7" rx="1.6" ry="1.1" fill="white" opacity="0.75">
+              <animate attributeName="ry" values="1.1;0.4;1.1" dur="0.12s" repeatCount="indefinite" />
+            </ellipse>
+            {/* Body */}
+            <ellipse cx="0" cy="0" rx="2.4" ry="1.8" fill="#facc15" />
+            {/* Stripes */}
+            <rect x="-1.5" y="-1.8" width="0.7" height="3.6" fill="#1f2937" />
+            <rect x="0.7" y="-1.8" width="0.7" height="3.6" fill="#1f2937" />
+            {/* Head (to the right, front of motion) */}
+            <circle cx="2.4" cy="0" r="1" fill="#1f2937" />
+          </g>
+
+          {/* Bee near the right-side flowers */}
+          <g>
+            <animateMotion dur="9s" repeatCount="indefinite" begin="1s" path="M 700 340 C 740 325 800 325 830 345 C 800 360 740 360 700 345 C 690 342 695 340 700 340 Z" />
+            <ellipse cx="-0.5" cy="-1.7" rx="1.6" ry="1.1" fill="white" opacity="0.75">
+              <animate attributeName="ry" values="1.1;0.4;1.1" dur="0.12s" repeatCount="indefinite" />
+            </ellipse>
+            <ellipse cx="0.8" cy="-1.7" rx="1.6" ry="1.1" fill="white" opacity="0.75">
+              <animate attributeName="ry" values="1.1;0.4;1.1" dur="0.12s" repeatCount="indefinite" />
+            </ellipse>
+            <ellipse cx="0" cy="0" rx="2.4" ry="1.8" fill="#facc15" />
+            <rect x="-1.5" y="-1.8" width="0.7" height="3.6" fill="#1f2937" />
+            <rect x="0.7" y="-1.8" width="0.7" height="3.6" fill="#1f2937" />
+            <circle cx="2.4" cy="0" r="1" fill="#1f2937" />
+          </g>
 
           {/* Small flowers scattered */}
           {[

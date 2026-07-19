@@ -37,6 +37,8 @@ import { FarmToMarketStory } from "@/components/FarmToMarketStory";
 import { StatusPill } from "@/components/StatusPill";
 import { supabase, type Listing } from "@/lib/supabase";
 import { useProduceImage } from "@/lib/produceImage";
+import { prefetchListings, prefetchContracts } from "@/lib/prefetch";
+import { backfillListingImages } from "@/lib/backfillImages";
 
 type Stats = { farmers: number; kg: number; locations: number };
 type LiveStats = {
@@ -82,9 +84,16 @@ export default function Home() {
       ]);
       const allListings = listingsRes.data ?? [];
       const orders = ordersRes.data ?? [];
-      // Show the 6 newest listings on the landing; the FarmNode tile auto-fetches
-      // a photo via Openverse when image_url is null (see useProduceImage).
+      // Show the 6 newest listings on the landing.
       setFeatured(allListings.slice(0, 6));
+
+      // Fire-and-forget: for any listing without an image, resolve one via
+      // Wikipedia and write the URL back to Supabase. Runs at most once per
+      // session (see backfillListingImages). Future page loads read image_url
+      // straight from the DB — no more per-load Openverse fetches.
+      backfillListingImages(allListings).then((n) => {
+        if (n > 0) console.info(`[FarmEasy] Backfilled ${n} listing image_url values`);
+      });
       setStats({
         farmers: new Set(allListings.map((l) => l.farmer_phone)).size,
         kg: Math.round(orders.reduce((s, o) => s + Number(o.quantity_kg), 0)),
@@ -214,6 +223,8 @@ function HeroSection() {
         <div className="flex flex-col sm:flex-row gap-3 max-w-md">
           <Link
             href="/farmer"
+            onMouseEnter={() => prefetchListings()}
+            onFocus={() => prefetchListings()}
             className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-extrabold text-base sm:text-lg tracking-tight py-4 px-6 rounded-xl shadow-lg transition-colors"
           >
             <Tractor className="w-5 h-5" />
@@ -221,6 +232,8 @@ function HeroSection() {
           </Link>
           <Link
             href="/buyer"
+            onMouseEnter={() => { prefetchListings(); prefetchContracts() }}
+            onFocus={() => { prefetchListings(); prefetchContracts() }}
             className="flex-1 flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-green-700 font-extrabold text-base sm:text-lg tracking-tight py-4 px-6 rounded-xl shadow-lg border-2 border-green-600 transition-colors"
           >
             <ShoppingCart className="w-5 h-5" />

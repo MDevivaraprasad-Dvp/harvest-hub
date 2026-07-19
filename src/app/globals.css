@@ -21,6 +21,32 @@
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+html { scroll-behavior: smooth; }
+main { scroll-behavior: smooth; }
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.animate-shimmer { animation: shimmer 1.6s linear infinite; }
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-in-up { animation: fade-in-up 320ms ease-out both; }
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(20px); }
+}
+.animate-toast-in  { animation: toast-in 220ms ease-out both; }
+.animate-toast-out { animation: toast-out 260ms ease-in both; }
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;

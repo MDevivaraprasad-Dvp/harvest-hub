@@ -13,6 +13,8 @@ export type SidebarItem = {
   Icon: LucideIcon
   badge?: number
   isNew?: boolean
+  /** Called on pointer hover — use to warm data caches before the user clicks. */
+  onPrefetch?: () => void
 }
 
 export function Sidebar<Tkey extends string>({
@@ -42,19 +44,17 @@ export function Sidebar<Tkey extends string>({
     return () => document.removeEventListener('keydown', onKey)
   }, [mobileOpen])
 
-  useEffect(() => {
-    setMobileOpen(false)
-  }, [active])
-
   const nav = (
     <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
       <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-green-300/70">Menu</div>
-      {items.map(({ key, label, Icon, badge, isNew }) => {
+      {items.map(({ key, label, Icon, badge, isNew, onPrefetch }) => {
         const isActive = key === active
         return (
           <button
             key={key}
-            onClick={() => onSelect(key)}
+            onClick={() => { onSelect(key); setMobileOpen(false) }}
+            onMouseEnter={onPrefetch}
+            onFocus={onPrefetch}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] text-left transition-all ${
               isActive
                 ? 'bg-green-700/80 text-white shadow-inner border-l-4 border-green-300 pl-2 font-bold tracking-tight'

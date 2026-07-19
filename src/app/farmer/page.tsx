@@ -14,16 +14,20 @@ import { ListingAnalytics } from '@/components/ListingAnalytics'
 import { Sidebar, SidebarLayout, type SidebarItem } from '@/components/Sidebar'
 import { FarmerContracts } from '@/components/Contracts'
 import { KnowledgeNetwork } from '@/components/KnowledgeNetwork'
+import { SkeletonGrid, SkeletonRow } from '@/components/ui/Skeleton'
+import { useUrlTab } from '@/lib/hooks/useUrlTab'
+import { prefetchListings, prefetchOrders, prefetchContracts } from '@/lib/prefetch'
 
 type FarmerProfile = { name: string; phone: string }
 type FarmerTab = 'listings' | 'orders' | 'contracts' | 'insights' | 'knowledge'
+const FARMER_TABS: readonly FarmerTab[] = ['listings', 'orders', 'contracts', 'insights', 'knowledge'] as const
 
 export default function FarmerPage() {
   const { t } = useLanguage()
   const [profile, setProfile] = useState<FarmerProfile | null>(null)
   const [showSignIn, setShowSignIn] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<FarmerTab>('listings')
+  const [tab, setTab] = useUrlTab<FarmerTab>('listings', FARMER_TABS)
   const [pendingCount, setPendingCount] = useState(0)
 
   useEffect(() => {
@@ -61,10 +65,10 @@ export default function FarmerPage() {
   if (loading) return null
 
   const items: (SidebarItem & { key: FarmerTab })[] = [
-    { key: 'listings', label: t('myListings'), Icon: LayoutDashboard },
-    { key: 'orders', label: t('orders'), Icon: ClipboardList, badge: pendingCount },
-    { key: 'contracts', label: t('contractFarming'), Icon: Handshake, isNew: true },
-    { key: 'insights', label: t('marketInsights'), Icon: BarChart3 },
+    { key: 'listings', label: t('myListings'), Icon: LayoutDashboard, onPrefetch: profile ? () => prefetchListings(profile.phone) : undefined },
+    { key: 'orders', label: t('orders'), Icon: ClipboardList, badge: pendingCount, onPrefetch: profile ? () => prefetchOrders({ farmerPhone: profile.phone }) : undefined },
+    { key: 'contracts', label: t('contractFarming'), Icon: Handshake, isNew: true, onPrefetch: () => prefetchContracts() },
+    { key: 'insights', label: t('marketInsights'), Icon: BarChart3, onPrefetch: () => prefetchListings() },
     { key: 'knowledge', label: t('knowledgeNavLink'), Icon: Brain, isNew: true },
   ]
 
@@ -152,7 +156,7 @@ function SignInForm({ onSignIn }: { onSignIn: (name: string, phone: string) => v
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (name.trim() && phone.trim()) {
       onSignIn(name.trim(), phone.trim())
@@ -266,7 +270,7 @@ function ListingsView({ profile }: { profile: FarmerProfile }) {
       )}
 
       {loading ? (
-        <p className="text-gray-500">{t('loading')}</p>
+        <SkeletonGrid count={4} />
       ) : listings.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
           <Sprout className="w-16 h-16 text-green-300 mx-auto mb-4" />
@@ -408,7 +412,7 @@ function OrdersView({ profile }: { profile: FarmerProfile }) {
       </div>
 
       {loading ? (
-        <p className="text-gray-500">{t('loading')}</p>
+        <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i} />)}</div>
       ) : orders.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
           <Package className="w-16 h-16 text-green-300 mx-auto mb-4" />
@@ -469,7 +473,7 @@ function CounterOfferModal({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
     const num = parseFloat(price)
@@ -768,7 +772,7 @@ function ListingForm({
     return data.publicUrl
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
 

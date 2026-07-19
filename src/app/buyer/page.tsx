@@ -19,9 +19,16 @@ import { Sidebar, SidebarLayout, type SidebarItem } from '@/components/Sidebar'
 import { BuyerContracts } from '@/components/Contracts'
 import { KnowledgeNetwork } from '@/components/KnowledgeNetwork'
 import { StatusPill } from '@/components/StatusPill'
+import { SkeletonGrid } from '@/components/ui/Skeleton'
+import { SignInForm } from '@/components/shared/SignInForm'
 import { readFavorites } from '@/lib/favorites'
 import { useProduceImage } from '@/lib/produceImage'
 import { categoriseProduce, CATEGORY_ORDER, type ProduceCategory } from '@/lib/produceCategory'
+import { useDebounced } from '@/lib/hooks/useDebounced'
+import { useUrlTab } from '@/lib/hooks/useUrlTab'
+import { useToast } from '@/components/ui/Toast'
+import { prefetchListings, prefetchContracts, prefetchOrders } from '@/lib/prefetch'
+import { backfillListingImages } from '@/lib/backfillImages'
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -40,9 +47,11 @@ type Tab = 'marketplace' | 'saved' | 'orders' | 'contracts' | 'insights' | 'know
 
 const PAGE_SIZE = 12
 
+const BUYER_TABS: readonly Tab[] = ['marketplace', 'saved', 'orders', 'contracts', 'insights', 'knowledge'] as const
+
 export default function BuyerPage() {
   const { t } = useLanguage()
-  const [tab, setTab] = useState<Tab>('marketplace')
+  const [tab, setTab] = useUrlTab<Tab>('marketplace', BUYER_TABS)
   const [listings, setListings] = useState<Listing[]>([])
   const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
@@ -51,21 +60,26 @@ export default function BuyerPage() {
   const [showSignIn, setShowSignIn] = useState(false)
 
   useEffect(() => {
-    const fetchAll = async () => {
-      const [lRes, rRes] = await Promise.all([
-        supabase.from('listings').select('*').order('created_at', { ascending: false }),
+    const load = async () => {
+      // Listings may already be warm from a hover on the landing page CTA.
+      const [ls, rRes] = await Promise.all([
+        prefetchListings(),
         supabase.from('reviews').select('*'),
       ])
-      if (lRes.error) console.error(lRes.error)
       if (rRes.error) console.error(rRes.error)
-      setListings(lRes.data ?? [])
+      setListings(ls)
       setReviews(rRes.data ?? [])
       setLoading(false)
+      // Fire-and-forget: fill in missing image_url values in the DB. No-op
+      // after the first landing/buyer visit each session (see backfillListingImages).
+      backfillListingImages(ls)
     }
-    fetchAll()
+    load()
   }, [])
 
   useEffect(() => {
+    // One-time read from localStorage + subscribe to external change event.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFavorites(readFavorites())
     const handler = () => setFavorites(readFavorites())
     window.addEventListener('farmeasy:favorites-changed', handler)
@@ -73,13 +87,14 @@ export default function BuyerPage() {
   }, [])
 
   useEffect(() => {
+    // Client-only identity hydration from localStorage. Safe: fires once after mount.
     const stored = localStorage.getItem('farmeasy_buyer')
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as BuyerProfile
-        if (parsed?.name && parsed?.phone) setProfile(parsed)
-      } catch {}
-    }
+    if (!stored) return
+    try {
+      const parsed = JSON.parse(stored) as BuyerProfile
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (parsed?.name && parsed?.phone) setProfile(parsed)
+    } catch {}
   }, [])
 
   const handleSignIn = (name: string, phone: string) => {
@@ -111,11 +126,11 @@ export default function BuyerPage() {
   }, [reviews])
 
   const items: (SidebarItem & { key: Tab })[] = [
-    { key: 'marketplace', label: t('tabMarketplace'), Icon: Store },
-    { key: 'saved', label: t('tabSaved'), Icon: Heart, badge: favorites.length },
-    { key: 'orders', label: t('tabMyOrders'), Icon: ClipboardList },
-    { key: 'contracts', label: t('contractFarming'), Icon: Handshake, isNew: true },
-    { key: 'insights', label: t('marketInsights'), Icon: BarChart3 },
+    { key: 'marketplace', label: t('tabMarketplace'), Icon: Store, onPrefetch: () => prefetchListings() },
+    { key: 'saved', label: t('tabSaved'), Icon: Heart, badge: favorites.length, onPrefetch: () => prefetchListings() },
+    { key: 'orders', label: t('tabMyOrders'), Icon: ClipboardList, onPrefetch: profile ? () => prefetchOrders({ buyerPhone: profile.phone }) : undefined },
+    { key: 'contracts', label: t('contractFarming'), Icon: Handshake, isNew: true, onPrefetch: () => prefetchContracts() },
+    { key: 'insights', label: t('marketInsights'), Icon: BarChart3, onPrefetch: () => prefetchListings() },
     { key: 'knowledge', label: t('knowledgeNavLink'), Icon: Brain, isNew: true },
   ]
 
@@ -218,24 +233,13 @@ function BuyerSignInModal({
   onSignIn: (name: string, phone: string) => void
 }) {
   const { t } = useLanguage()
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (name.trim() && phone.trim()) {
-      onSignIn(name.trim(), phone.trim())
-      setName('')
-      setPhone('')
-    }
-  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-green-900">{t('welcomeBuyer')}</h2>
+            <h2 className="text-xl font-extrabold text-green-900 tracking-tight">{t('welcomeBuyer')}</h2>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600"
@@ -244,37 +248,7 @@ function BuyerSignInModal({
               <X className="w-5 h-5" />
             </button>
           </div>
-          <p className="text-gray-600 mb-4 text-sm">{t('signInBuyerPrompt')}</p>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('yourName')}</label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t('yourNamePlaceholder')}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('phoneNumber')}</label>
-              <input
-                type="tel"
-                required
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder={t('phonePlaceholder')}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg"
-            >
-              {t('continue')}
-            </button>
-          </form>
+          <SignInForm onSignIn={onSignIn} intro={t('signInBuyerPrompt')} />
         </div>
       </div>
     </div>
@@ -294,12 +268,14 @@ function MarketplaceView({
 }) {
   const { t } = useLanguage()
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounced(search, 180)
   const [locationFilter, setLocationFilter] = useState('')
   const [activeCategories, setActiveCategories] = useState<Set<ProduceCategory>>(new Set())
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const [orderingListing, setOrderingListing] = useState<Listing | null>(null)
   const [revealedPhone, setRevealedPhone] = useState<Record<number, boolean>>({})
+  const toast = useToast()
 
   const locations = useMemo(() => {
     const set = new Set(listings.map((l) => l.location))
@@ -316,13 +292,14 @@ function MarketplaceView({
   }, [listings])
 
   const filtered = useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase()
     return listings.filter((l) => {
-      const matchesSearch = search.trim() === '' || l.produce_name.toLowerCase().includes(search.toLowerCase())
+      const matchesSearch = q === '' || l.produce_name.toLowerCase().includes(q)
       const matchesLocation = locationFilter === '' || l.location === locationFilter
       const matchesCategory = activeCategories.size === 0 || activeCategories.has(categoriseProduce(l.produce_name))
       return matchesSearch && matchesLocation && matchesCategory
     })
-  }, [listings, search, locationFilter, activeCategories])
+  }, [listings, debouncedSearch, locationFilter, activeCategories])
 
   const toggleCategory = (c: ProduceCategory) => {
     setActiveCategories((prev) => {
@@ -334,8 +311,10 @@ function MarketplaceView({
   }
 
   useEffect(() => {
+    // Reset infinite-scroll cap when filters change.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisibleCount(PAGE_SIZE)
-  }, [search, locationFilter, activeCategories])
+  }, [debouncedSearch, locationFilter, activeCategories])
 
   useEffect(() => {
     if (visibleCount >= filtered.length) return
@@ -430,7 +409,7 @@ function MarketplaceView({
       </div>
 
       {loading ? (
-        <p className="text-gray-500">{t('loadingProduce')}</p>
+        <SkeletonGrid count={8} />
       ) : filtered.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
           <Leaf className="w-16 h-16 text-green-300 mx-auto mb-4" />
@@ -471,7 +450,7 @@ function MarketplaceView({
         <OrderForm
           listing={orderingListing}
           onClose={() => setOrderingListing(null)}
-          onPlaced={() => { setOrderingListing(null); alert(t('orderPlaced')) }}
+          onPlaced={() => { setOrderingListing(null); toast.push(t('orderPlaced'), 'success') }}
         />
       )}
     </>
@@ -490,6 +469,7 @@ function SavedView({
   emptyMessage: string
 }) {
   const { t } = useLanguage()
+  const toast = useToast()
   const [orderingListing, setOrderingListing] = useState<Listing | null>(null)
   const [revealedPhone, setRevealedPhone] = useState<Record<number, boolean>>({})
 
@@ -501,7 +481,7 @@ function SavedView({
       </div>
 
       {loading ? (
-        <p className="text-gray-500">{t('loadingProduce')}</p>
+        <SkeletonGrid count={4} />
       ) : listings.length === 0 ? (
         <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
           <Heart className="w-16 h-16 text-red-200 mx-auto mb-4" />
@@ -526,7 +506,7 @@ function SavedView({
         <OrderForm
           listing={orderingListing}
           onClose={() => setOrderingListing(null)}
-          onPlaced={() => { setOrderingListing(null); alert(t('orderPlaced')) }}
+          onPlaced={() => { setOrderingListing(null); toast.push(t('orderPlaced'), 'success') }}
         />
       )}
     </>
@@ -584,7 +564,9 @@ function ListingCard({
     return () => observer.disconnect()
   }, [trackViews, logView])
 
-  const isFresh = Date.now() - new Date(listing.created_at).getTime() < SEVEN_DAYS_MS
+  // Snapshot "now" at mount so freshness doesn't flicker on re-renders.
+  const [now] = useState(() => Date.now())
+  const isFresh = now - new Date(listing.created_at).getTime() < SEVEN_DAYS_MS
   const isTrusted = farmerStats?.average != null && farmerStats.average >= 4.5 && farmerStats.count >= 2
   const autoImage = useProduceImage(listing.produce_name, listing.image_url)
   const [imgFailed, setImgFailed] = useState(false)
